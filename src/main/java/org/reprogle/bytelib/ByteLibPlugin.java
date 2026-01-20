@@ -4,7 +4,7 @@ import com.google.inject.Injector;
 import io.papermc.paper.plugin.configuration.PluginMeta;
 import net.kyori.adventure.text.logger.slf4j.ComponentLogger;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.reprogle.bytelib.lifecycle.PluginLifecycleRunner;
+import org.reprogle.bytelib.boot.lifecycle.PluginLifecycleRunner;
 
 import java.nio.file.Path;
 import java.util.Objects;

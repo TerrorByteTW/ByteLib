@@ -35,6 +35,10 @@ public class Row {
         return SqlType.UUID_TEXT.read(rs, col);
     }
 
+    public Boolean bool(String col) throws SQLException {
+        return SqlType.BOOLEAN.read(rs, col);
+    }
+
     public <T> T get(String col, SqlType<T> type) throws SQLException {
         return type.read(rs, col);
     }

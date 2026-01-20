@@ -1,4 +1,4 @@
-package org.reprogle.bytelib.wiring;
+package org.reprogle.bytelib.boot.wiring;
 
 import com.google.inject.Module;
 import io.papermc.paper.plugin.configuration.PluginMeta;

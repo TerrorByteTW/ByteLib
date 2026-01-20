@@ -11,18 +11,19 @@ import net.kyori.adventure.text.logger.slf4j.ComponentLogger;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jspecify.annotations.NonNull;
 import org.reprogle.bytelib.commands.CommandsModule;
-import org.reprogle.bytelib.inject.CoreModule;
-import org.reprogle.bytelib.inject.PluginInstanceModule;
-import org.reprogle.bytelib.lifecycle.LifecycleModule;
-import org.reprogle.bytelib.wiring.PluginWiring;
-import org.reprogle.bytelib.wiring.WiringResolver;
+import org.reprogle.bytelib.boot.inject.CoreModule;
+import org.reprogle.bytelib.boot.inject.PluginInstanceModule;
+import org.reprogle.bytelib.boot.lifecycle.LifecycleModule;
+import org.reprogle.bytelib.boot.wiring.PluginWiring;
+import org.reprogle.bytelib.boot.wiring.WiringResolver;
+import org.reprogle.bytelib.config.ConfigModule;
 
 import java.lang.reflect.Constructor;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
-@SuppressWarnings({"UnstableApiUsage", "unused"})
+@SuppressWarnings({ "UnstableApiUsage", "unused" })
 public final class BytePluginBootstrap implements PluginBootstrap {
     @Override
     public void bootstrap(BootstrapContext context) {
@@ -52,6 +53,7 @@ public final class BytePluginBootstrap implements PluginBootstrap {
 
         List<Module> childModules = new ArrayList<>();
         childModules.add(new PluginInstanceModule(plugin));
+        childModules.add(new ConfigModule());
         childModules.add(new LifecycleModule());
         childModules.add(new CommandsModule());
         childModules.addAll(wiring.modules(meta, dataDir, logger));
@@ -63,7 +65,6 @@ public final class BytePluginBootstrap implements PluginBootstrap {
 
         return plugin;
     }
-
 
     @SuppressWarnings("unchecked")
     private Class<? extends JavaPlugin> loadPluginMain(ClassLoader cl, String mainClassName) {
@@ -83,15 +84,13 @@ public final class BytePluginBootstrap implements PluginBootstrap {
             Injector injector,
             PluginMeta meta,
             Path dataDir,
-            ComponentLogger logger
-    ) {
+            ComponentLogger logger) {
         try {
             Constructor<? extends JavaPlugin> ctor = pluginClass.getDeclaredConstructor(
                     com.google.inject.Injector.class,
                     io.papermc.paper.plugin.configuration.PluginMeta.class,
                     java.nio.file.Path.class,
-                    net.kyori.adventure.text.logger.slf4j.ComponentLogger.class
-            );
+                    net.kyori.adventure.text.logger.slf4j.ComponentLogger.class);
             ctor.setAccessible(true);
             return ctor.newInstance(injector, meta, dataDir, logger);
         } catch (NoSuchMethodException e) {
@@ -99,8 +98,7 @@ public final class BytePluginBootstrap implements PluginBootstrap {
                     "Plugin main class must declare a constructor: " +
                             pluginClass.getName() +
                             "(Injector, PluginMeta, Path, ComponentLogger)",
-                    e
-            );
+                    e);
         } catch (ReflectiveOperationException e) {
             throw new IllegalStateException("Failed to instantiate plugin: " + pluginClass.getName(), e);
         }

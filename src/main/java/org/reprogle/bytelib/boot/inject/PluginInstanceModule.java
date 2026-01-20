@@ -1,4 +1,4 @@
-package org.reprogle.bytelib.inject;
+package org.reprogle.bytelib.boot.inject;
 
 import com.google.inject.AbstractModule;
 import org.bukkit.plugin.Plugin;

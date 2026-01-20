@@ -12,8 +12,10 @@ public interface SqlType<T> {
 
     SqlType<Integer> I32 = new SqlType<>() {
         public void bind(PreparedStatement ps, int index, Integer value) throws SQLException {
-            if (value == null) ps.setNull(index, java.sql.Types.INTEGER);
-            else ps.setInt(index, value);
+            if (value == null)
+                ps.setNull(index, java.sql.Types.INTEGER);
+            else
+                ps.setInt(index, value);
         }
 
         public Integer read(ResultSet rs, String column) throws SQLException {
@@ -24,8 +26,10 @@ public interface SqlType<T> {
 
     SqlType<Long> I64 = new SqlType<>() {
         public void bind(PreparedStatement ps, int index, Long value) throws SQLException {
-            if (value == null) ps.setNull(index, java.sql.Types.BIGINT);
-            else ps.setLong(index, value);
+            if (value == null)
+                ps.setNull(index, java.sql.Types.BIGINT);
+            else
+                ps.setLong(index, value);
         }
 
         public Long read(ResultSet rs, String column) throws SQLException {
@@ -36,8 +40,10 @@ public interface SqlType<T> {
 
     SqlType<Double> F64 = new SqlType<>() {
         public void bind(PreparedStatement ps, int index, Double value) throws SQLException {
-            if (value == null) ps.setNull(index, java.sql.Types.DOUBLE);
-            else ps.setDouble(index, value);
+            if (value == null)
+                ps.setNull(index, java.sql.Types.DOUBLE);
+            else
+                ps.setDouble(index, value);
         }
 
         public Double read(ResultSet rs, String column) throws SQLException {
@@ -74,6 +80,16 @@ public interface SqlType<T> {
         public UUID read(ResultSet rs, String column) throws SQLException {
             String s = rs.getString(column);
             return s == null ? null : UUID.fromString(s);
+        }
+    };
+
+    SqlType<Boolean> BOOLEAN = new SqlType<>() {
+        public void bind(PreparedStatement ps, int index, Boolean value) throws SQLException {
+            ps.setInt(index, value ? 1 : 0);
+        }
+
+        public Boolean read(ResultSet rs, String column) throws SQLException {
+            return rs.getInt(column) == 1;
         }
     };
 }

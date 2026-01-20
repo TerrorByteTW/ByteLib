@@ -1,8 +1,8 @@
 package org.reprogle.bytelib.db.migrate;
 
-import org.reprogle.bytelib.db.api.DatabaseTx;
+import org.reprogle.bytelib.db.sqlite.SqliteDatabase;
 
 @FunctionalInterface
 public interface Migration {
-    void apply(DatabaseTx tx) throws Exception;
+    void apply(SqliteDatabase.Tx tx) throws Exception;
 }

@@ -1,4 +1,4 @@
-package org.reprogle.bytelib.wiring;
+package org.reprogle.bytelib.boot.wiring;
 
 import java.util.Optional;
 import java.util.ServiceLoader;

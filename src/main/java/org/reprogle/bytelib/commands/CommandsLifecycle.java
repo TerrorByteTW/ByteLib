@@ -3,7 +3,7 @@ package org.reprogle.bytelib.commands;
 import com.google.inject.Inject;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.reprogle.bytelib.lifecycle.PluginLifecycle;
+import org.reprogle.bytelib.boot.lifecycle.PluginLifecycle;
 
 import java.util.Set;
 

@@ -1,6 +1,6 @@
 package org.reprogle.bytelib.db.migrate;
 
-import org.reprogle.bytelib.db.api.Database;
+import org.reprogle.bytelib.db.sqlite.SqliteDatabase;
 
 import java.util.Comparator;
 import java.util.List;
@@ -14,9 +14,9 @@ public final class UserVersionMigrator {
                 .toList();
     }
 
-    public void migrate(Database db) {
+    public void migrate(SqliteDatabase db) {
         db.transaction(tx -> {
-            Integer current = db.queryOne("PRAGMA user_version;", row -> row.i32("user_version"));
+            Integer current = tx.queryOne("PRAGMA user_version;", row -> row.i32("user_version"));
             int ver = current == null ? 0 : current;
 
             for (MigrationStep step : steps) {

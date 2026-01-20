@@ -1,4 +1,4 @@
-package org.reprogle.bytelib.lifecycle;
+package org.reprogle.bytelib.boot.lifecycle;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.multibindings.Multibinder;

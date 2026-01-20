@@ -2,26 +2,46 @@ package org.reprogle.bytelib.db.sqlite;
 
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.reprogle.bytelib.db.api.*;
-import org.reprogle.bytelib.db.api.Database;
-import org.reprogle.bytelib.db.api.DatabaseTx;
-import org.reprogle.bytelib.db.api.RowMapper;
-import org.reprogle.bytelib.db.api.TransactionCallback;
 import org.reprogle.bytelib.db.api.Param;
+import org.reprogle.bytelib.db.api.Row;
+import org.reprogle.bytelib.db.api.RowMapper;
+import org.reprogle.bytelib.db.api.SqlType;
+import org.reprogle.bytelib.db.api.Table;
 import org.reprogle.bytelib.db.api.exceptions.DbMainThreadDisallowedException;
 import org.reprogle.bytelib.db.api.exceptions.DbTimeoutException;
 
 import java.nio.file.Path;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.time.Duration;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.StringJoiner;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
-public final class SqliteDatabase implements Database {
+public final class SqliteDatabase implements AutoCloseable {
     private final JavaPlugin plugin;
     private final Path dbFile;
     private final ExecutorService executor;
     private final SqliteConfig config;
+    private final SqliteQueryCache cache;
+    private volatile Thread dbThread;
 
     public SqliteDatabase(JavaPlugin plugin, Path dbFile, SqliteConfig config) {
         this.plugin = Objects.requireNonNull(plugin);
@@ -34,7 +54,10 @@ public final class SqliteDatabase implements Database {
             return t;
         });
 
-        // warm up
+        this.cache = new SqliteQueryCache(config, executor);
+
+        initDbThread();
+
         runOnDbThread(() -> {
             try (Connection conn = openConnection()) {
                 applyPragmas(conn);
@@ -44,145 +67,193 @@ public final class SqliteDatabase implements Database {
     }
 
     // ----------------------
-    // Unguarded “sync semantics”
+    // Raw SQL
     // ----------------------
 
-    @Override
     public int execute(String sql, Param<?>... params) {
-        return executeBlocking(sql, new BlockingOptions(Duration.ZERO, MainThreadPolicy.ALLOW, TimeoutBehavior.THROW, Duration.ZERO), params);
-    }
-
-    @Override
-    public <T> List<T> query(String sql, RowMapper<T> mapper, Param<?>... params) {
-        return queryBlocking(sql, mapper, new BlockingOptions(Duration.ZERO, MainThreadPolicy.ALLOW, TimeoutBehavior.THROW, Duration.ZERO), params);
-    }
-
-    @Override
-    public <T> T queryOne(String sql, RowMapper<T> mapper, Param<?>... params) {
-        var list = query(sql, mapper, params);
-        return list.isEmpty() ? null : list.getFirst();
-    }
-
-    // ----------------------
-    // Guarded blocking (event-safe-ish)
-    // ----------------------
-
-    @Override
-    public int executeBlocking(String sql, BlockingOptions options, Param<?>... params) {
-        return guardedBlock("execute", options, () ->
+        Objects.requireNonNull(sql, "sql");
+        Integer result = blockingCall("execute", () ->
                 runSql(conn -> {
-                    applyPragmas(conn);
                     try (PreparedStatement ps = conn.prepareStatement(sql)) {
                         bind(ps, params);
                         return ps.executeUpdate();
                     }
                 })
         );
+
+        if (result == null) result = 0;
+        cache.invalidateForWrite(sql);
+        return result;
     }
 
-    @Override
-    public <T> List<T> queryBlocking(String sql, RowMapper<T> mapper, BlockingOptions options, Param<?>... params) {
-        return guardedBlock("query", options, () ->
-                runSql(conn -> {
-                    applyPragmas(conn);
-                    try (PreparedStatement ps = conn.prepareStatement(sql)) {
-                        bind(ps, params);
-                        try (ResultSet rs = ps.executeQuery()) {
-                            List<T> out = new ArrayList<>();
-                            while (rs.next()) out.add(mapper.map(new Row(rs)));
-                            return out;
-                        }
-                    }
-                })
-        );
+    public <T> List<T> query(String sql, RowMapper<T> mapper, Param<?>... params) {
+        Objects.requireNonNull(sql, "sql");
+        Objects.requireNonNull(mapper, "mapper");
+        return cache.query(sql, mapper, params, this::loadQueryBlocking);
     }
 
-    @Override
-    public <T> T queryOneBlocking(String sql, RowMapper<T> mapper, BlockingOptions options, Param<?>... params) {
-        List<T> list = queryBlocking(sql, mapper, options, params);
+    public <T> T queryOne(String sql, RowMapper<T> mapper, Param<?>... params) {
+        List<T> list = query(sql, mapper, params);
         return list.isEmpty() ? null : list.getFirst();
+    }
+
+    public CompletableFuture<Integer> executeAsync(String sql, Param<?>... params) {
+        return CompletableFuture.supplyAsync(() -> execute(sql, params), executor);
+    }
+
+    public <T> CompletableFuture<List<T>> queryAsync(String sql, RowMapper<T> mapper, Param<?>... params) {
+        return CompletableFuture.supplyAsync(() -> query(sql, mapper, params), executor);
+    }
+
+    // ----------------------
+    // CRUD helpers
+    // ----------------------
+
+    public int insert(Table table, Map<Table.Column<?>, ?> values) {
+        Objects.requireNonNull(table, "table");
+        Objects.requireNonNull(values, "values");
+        if (values.isEmpty()) throw new IllegalArgumentException("values is empty");
+
+        StringJoiner cols = new StringJoiner(", ");
+        StringJoiner placeholders = new StringJoiner(", ");
+        List<Param<?>> params = new ArrayList<>(values.size());
+
+        for (Map.Entry<Table.Column<?>, ?> entry : values.entrySet()) {
+            Table.Column<?> col = Objects.requireNonNull(entry.getKey(), "column");
+            cols.add(col.name());
+            placeholders.add("?");
+            params.add(paramFor(col, entry.getValue()));
+        }
+
+        String sql = "INSERT INTO " + table.name() + " (" + cols + ") VALUES (" + placeholders + ")";
+        return execute(sql, params.toArray(new Param<?>[0]));
+    }
+
+    public int update(Table table, Map<Table.Column<?>, ?> values, String whereSql, Param<?>... whereParams) {
+        Objects.requireNonNull(table, "table");
+        Objects.requireNonNull(values, "values");
+        if (values.isEmpty()) throw new IllegalArgumentException("values is empty");
+
+        StringJoiner set = new StringJoiner(", ");
+        List<Param<?>> params = new ArrayList<>(values.size() + (whereParams == null ? 0 : whereParams.length));
+
+        for (Map.Entry<Table.Column<?>, ?> entry : values.entrySet()) {
+            Table.Column<?> col = Objects.requireNonNull(entry.getKey(), "column");
+            set.add(col.name() + " = ?");
+            params.add(paramFor(col, entry.getValue()));
+        }
+
+        StringBuilder sql = new StringBuilder("UPDATE ").append(table.name()).append(" SET ").append(set);
+        if (whereSql != null && !whereSql.isBlank()) {
+            sql.append(" WHERE ").append(whereSql);
+            if (whereParams != null && whereParams.length > 0) {
+                params.addAll(Arrays.asList(whereParams));
+            }
+        }
+
+        return execute(sql.toString(), params.toArray(new Param<?>[0]));
+    }
+
+    public int delete(Table table, String whereSql, Param<?>... params) {
+        Objects.requireNonNull(table, "table");
+        StringBuilder sql = new StringBuilder("DELETE FROM ").append(table.name());
+        if (whereSql != null && !whereSql.isBlank()) {
+            sql.append(" WHERE ").append(whereSql);
+        }
+        return execute(sql.toString(), params);
+    }
+
+    public <T> List<T> selectAll(Table table, RowMapper<T> mapper) {
+        Objects.requireNonNull(table, "table");
+        return query("SELECT * FROM " + table.name(), mapper);
+    }
+
+    public <T> List<T> selectWhere(Table table, String whereSql, RowMapper<T> mapper, Param<?>... params) {
+        Objects.requireNonNull(table, "table");
+        StringBuilder sql = new StringBuilder("SELECT * FROM ").append(table.name());
+        if (whereSql != null && !whereSql.isBlank()) {
+            sql.append(" WHERE ").append(whereSql);
+        }
+        return query(sql.toString(), mapper, params);
     }
 
     // ----------------------
     // Transactions
     // ----------------------
 
-    @Override
-    public <T> T transaction(TransactionCallback<T> work) {
-        return runOnDbThread(() -> {
+    public <T> T transaction(Transaction<T> work) {
+        Objects.requireNonNull(work, "work");
+        return blockingCall("transaction", () -> {
             try (Connection conn = openConnection()) {
                 applyPragmas(conn);
 
                 boolean prev = conn.getAutoCommit();
                 conn.setAutoCommit(false);
 
+                TxImpl tx = new TxImpl(conn);
+                boolean committed = false;
                 try {
-                    DatabaseTx tx = new TxImpl(conn);
                     T result = work.run(tx);
                     conn.commit();
+                    committed = true;
                     return result;
                 } catch (Exception e) {
                     conn.rollback();
                     throw wrap(e);
                 } finally {
                     conn.setAutoCommit(prev);
+                    if (committed) {
+                        cache.invalidateAfterTransaction(tx.touchedTables, tx.clearAllOnCommit);
+                    }
                 }
             }
         });
     }
 
-    // ----------------------
-    // Async
-    // ----------------------
+    public interface Tx {
+        int execute(String sql, Param<?>... params);
 
-    @Override
-    public CompletableFuture<Integer> executeAsync(String sql, Param<?>... params) {
-        return CompletableFuture.supplyAsync(() -> execute(sql, params), executor);
+        <T> List<T> query(String sql, RowMapper<T> mapper, Param<?>... params);
+
+        <T> T queryOne(String sql, RowMapper<T> mapper, Param<?>... params);
     }
 
-    @Override
-    public <T> CompletableFuture<List<T>> queryAsync(String sql, RowMapper<T> mapper, Param<?>... params) {
-        return CompletableFuture.supplyAsync(() -> query(sql, mapper, params), executor);
-    }
-
-    @Override
-    public void close() {
-        executor.shutdown();
+    @FunctionalInterface
+    public interface Transaction<T> {
+        T run(Tx tx) throws Exception;
     }
 
     // ----------------------
     // Guarding + blocking core
     // ----------------------
 
-    private <T> T guardedBlock(String opName, BlockingOptions options, Callable<T> call) {
+    private <T> T blockingCall(String opName, Callable<T> call) {
         boolean main = Bukkit.isPrimaryThread();
         if (main) {
-            switch (options.mainThreadPolicy()) {
+            switch (config.mainThreadPolicy()) {
                 case DISALLOW -> throw new DbMainThreadDisallowedException("DB " + opName + " called on main thread");
-                case WARN -> {
-                    // no-op here; we’ll log duration below
-                }
-                case ALLOW -> {
+                case WARN, ALLOW -> {
                 }
             }
         }
 
         long startNanos = System.nanoTime();
         try {
-            if (options.timeout().isZero() || options.timeout().isNegative()) {
-                T result = call.call();
-                logSlowIfNeeded(main, options, opName, startNanos);
+            Duration timeout = main ? config.mainThreadTimeout() : null;
+            if (timeout == null || timeout.isZero() || timeout.isNegative()) {
+                T result = runOnDbThread(call);
+                logSlowIfNeeded(main, opName, startNanos);
                 return result;
             }
 
             Future<T> f = executor.submit(call);
             try {
-                T result = f.get(options.timeout().toMillis(), TimeUnit.MILLISECONDS);
-                logSlowIfNeeded(main, options, opName, startNanos);
+                T result = f.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
+                logSlowIfNeeded(true, opName, startNanos);
                 return result;
             } catch (TimeoutException te) {
                 f.cancel(true);
-                return onTimeout(options, opName, te);
+                return onTimeout(opName, te);
             }
         } catch (RuntimeException re) {
             throw re;
@@ -191,24 +262,24 @@ public final class SqliteDatabase implements Database {
         }
     }
 
-    private <T> T onTimeout(BlockingOptions options, String opName, TimeoutException te) {
-        switch (options.timeoutBehavior()) {
+    private <T> T onTimeout(String opName, TimeoutException te) {
+        switch (config.timeoutBehavior()) {
             case FAIL_OPEN -> {
-                return null; // caller decides default
+                return null;
             }
             case FAIL_CLOSED, THROW ->
-                    throw new DbTimeoutException("DB " + opName + " timed out after " + options.timeout().toMillis() + "ms", te);
+                    throw new DbTimeoutException("DB " + opName + " timed out after " + config.mainThreadTimeout().toMillis() + "ms", te);
             default -> throw new DbTimeoutException("DB " + opName + " timed out", te);
         }
     }
 
-    private void logSlowIfNeeded(boolean main, BlockingOptions options, String opName, long startNanos) {
+    private void logSlowIfNeeded(boolean main, String opName, long startNanos) {
         if (!main) return;
-        if (options.mainThreadPolicy() != MainThreadPolicy.WARN) return;
-        if (options.slowQueryWarnThreshold().isZero() || options.slowQueryWarnThreshold().isNegative()) return;
+        if (config.mainThreadPolicy() != SqliteConfig.MainThreadPolicy.WARN) return;
+        if (config.slowQueryWarnThreshold() == null || config.slowQueryWarnThreshold().isZero() || config.slowQueryWarnThreshold().isNegative()) return;
 
         long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNanos);
-        if (elapsedMs >= options.slowQueryWarnThreshold().toMillis()) {
+        if (elapsedMs >= config.slowQueryWarnThreshold().toMillis()) {
             plugin.getLogger().warning("[ByteLib-DB] Slow main-thread DB " + opName + ": " + elapsedMs + "ms");
         }
     }
@@ -233,6 +304,7 @@ public final class SqliteDatabase implements Database {
     private <T> T runSql(SqlWork<T> work) {
         return runOnDbThread(() -> {
             try (Connection conn = openConnection()) {
+                applyPragmas(conn);
                 return work.run(conn);
             }
         });
@@ -240,11 +312,16 @@ public final class SqliteDatabase implements Database {
 
     private <T> T runOnDbThread(Callable<T> work) {
         try {
+            if (Thread.currentThread() == dbThread) {
+                return work.call();
+            }
             return executor.submit(work).get();
         } catch (ExecutionException e) {
             throw wrap(e.getCause());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            throw wrap(e);
+        } catch (Exception e) {
             throw wrap(e);
         }
     }
@@ -262,15 +339,65 @@ public final class SqliteDatabase implements Database {
         return (t instanceof RuntimeException re) ? re : new RuntimeException(t);
     }
 
+    @SuppressWarnings("unchecked")
+    private static Param<?> paramFor(Table.Column<?> col, Object value) {
+        SqlType<Object> type = (SqlType<Object>) col.type();
+        return new Param<>(type, value);
+    }
+
     @FunctionalInterface
     private interface SqlWork<T> {
         T run(Connection conn) throws Exception;
     }
 
-    private record TxImpl(Connection conn) implements DatabaseTx {
+    private void initDbThread() {
+        try {
+            executor.submit(() -> dbThread = Thread.currentThread()).get();
+        } catch (Exception e) {
+            throw wrap(e);
+        }
+    }
+
+    public void invalidateAll() {
+        cache.invalidateAll();
+    }
+
+    public void invalidateTable(String tableName) {
+        cache.invalidateTable(tableName);
+    }
+
+    private <T> List<T> loadQuery(String sql, RowMapper<T> mapper, Param<?>... params) throws Exception {
+        return runSql(conn -> queryOnConnection(conn, sql, mapper, params));
+    }
+
+    private <T> List<T> queryOnConnection(Connection conn, String sql, RowMapper<T> mapper, Param<?>... params) throws Exception {
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            bind(ps, params);
+            try (ResultSet rs = ps.executeQuery()) {
+                List<T> out = new ArrayList<>();
+                while (rs.next()) out.add(mapper.map(new Row(rs)));
+                return out;
+            }
+        }
+    }
+
+    private <T> List<T> loadQueryBlocking(String sql, RowMapper<T> mapper, Param<?>... params) throws Exception {
+        List<T> result = blockingCall("query", () -> loadQuery(sql, mapper, params));
+        return result == null ? List.of() : result;
+    }
+
+    private final class TxImpl implements Tx {
+        private final Connection conn;
+        private final Set<String> touchedTables = ConcurrentHashMap.newKeySet();
+        private boolean clearAllOnCommit;
+
+        private TxImpl(Connection conn) {
+            this.conn = conn;
+        }
 
         @Override
         public int execute(String sql, Param<?>... params) {
+            recordTable(sql);
             try (PreparedStatement ps = conn.prepareStatement(sql)) {
                 bind(ps, params);
                 return ps.executeUpdate();
@@ -281,13 +408,8 @@ public final class SqliteDatabase implements Database {
 
         @Override
         public <T> List<T> query(String sql, RowMapper<T> mapper, Param<?>... params) {
-            try (PreparedStatement ps = conn.prepareStatement(sql)) {
-                bind(ps, params);
-                try (ResultSet rs = ps.executeQuery()) {
-                    List<T> out = new ArrayList<>();
-                    while (rs.next()) out.add(mapper.map(new Row(rs)));
-                    return out;
-                }
+            try {
+                return queryOnConnection(conn, sql, mapper, params);
             } catch (Exception e) {
                 throw wrap(e);
             }
@@ -295,8 +417,22 @@ public final class SqliteDatabase implements Database {
 
         @Override
         public <T> T queryOne(String sql, RowMapper<T> mapper, Param<?>... params) {
-            var l = query(sql, mapper, params);
-            return l.isEmpty() ? null : l.getFirst();
+            List<T> list = query(sql, mapper, params);
+            return list.isEmpty() ? null : list.getFirst();
         }
+
+        private void recordTable(String sql) {
+            String table = SqliteQueryCache.extractTableName(sql);
+            if (table == null) {
+                clearAllOnCommit = true;
+                return;
+            }
+            touchedTables.add(table);
+        }
+    }
+
+    @Override
+    public void close() {
+        executor.shutdown();
     }
 }

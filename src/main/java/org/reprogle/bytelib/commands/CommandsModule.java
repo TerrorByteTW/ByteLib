@@ -2,7 +2,7 @@ package org.reprogle.bytelib.commands;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.multibindings.Multibinder;
-import org.reprogle.bytelib.lifecycle.PluginLifecycle;
+import org.reprogle.bytelib.boot.lifecycle.PluginLifecycle;
 
 public final class CommandsModule extends AbstractModule {
     @Override
