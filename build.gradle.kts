@@ -4,6 +4,7 @@ import java.time.format.DateTimeFormatter
 
 plugins {
     java
+    `maven-publish`
     id("com.gradleup.shadow") version "9.2.2"
     alias(libs.plugins.lombok);
 }
@@ -29,6 +30,8 @@ java {
     toolchain {
         languageVersion.set(JavaLanguageVersion.of(21))
     }
+    withSourcesJar()
+    withJavadocJar()
 }
 
 repositories {
@@ -64,4 +67,27 @@ tasks.shadowJar {
 
 tasks.build {
     dependsOn(tasks.shadowJar)
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("maven") {
+            groupId = "$group"
+            artifactId = "bytelib"
+            version = version
+
+            from(components["java"])
+        }
+    }
+
+    repositories {
+        maven {
+            name = "GithubPackages"
+            url = uri("https://maven.pkg.github.com/TerrorByteTW/ByteLib")
+            credentials {
+                username = System.getenv("GITHUB_ACTOR")
+                password = System.getenv("GITHUB_TOKEN")
+            }
+        }
+    }
 }

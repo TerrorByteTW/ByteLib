@@ -35,6 +35,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+@SuppressWarnings("unused")
 public final class SqliteDatabase implements AutoCloseable {
     private final JavaPlugin plugin;
     private final Path dbFile;
@@ -43,6 +44,14 @@ public final class SqliteDatabase implements AutoCloseable {
     private final SqliteQueryCache cache;
     private volatile Thread dbThread;
 
+    /**
+     * Creates a new instance SqliteDatabase, creating a new Executor, new cache, and setting up the DB for use.
+     * This should not be instantiated manually, but rather should be created via {@link SqliteModule}.
+     *
+     * @param plugin An instance of JavaPlugin, which should be the plugin that was booted by this library
+     * @param dbFile The path you want your Database file to be written at. Should include an extension
+     * @param config The configuration for the SqliteDatabase.
+     */
     public SqliteDatabase(JavaPlugin plugin, Path dbFile, SqliteConfig config) {
         this.plugin = Objects.requireNonNull(plugin);
         this.dbFile = Objects.requireNonNull(dbFile);
@@ -211,6 +220,7 @@ public final class SqliteDatabase implements AutoCloseable {
     }
 
     public interface Tx {
+        @SuppressWarnings("UnusedReturnValue")
         int execute(String sql, Param<?>... params);
 
         <T> List<T> query(String sql, RowMapper<T> mapper, Param<?>... params);
@@ -227,7 +237,7 @@ public final class SqliteDatabase implements AutoCloseable {
     // Guarding + blocking core
     // ----------------------
 
-    private <T> T blockingCall(String opName, Callable<T> call) {
+    private <T> T blockingCall(String opName, Callable<T> call) throws RuntimeException {
         boolean main = Bukkit.isPrimaryThread();
         if (main) {
             switch (config.mainThreadPolicy()) {
@@ -276,7 +286,8 @@ public final class SqliteDatabase implements AutoCloseable {
     private void logSlowIfNeeded(boolean main, String opName, long startNanos) {
         if (!main) return;
         if (config.mainThreadPolicy() != SqliteConfig.MainThreadPolicy.WARN) return;
-        if (config.slowQueryWarnThreshold() == null || config.slowQueryWarnThreshold().isZero() || config.slowQueryWarnThreshold().isNegative()) return;
+        if (config.slowQueryWarnThreshold() == null || config.slowQueryWarnThreshold().isZero() || config.slowQueryWarnThreshold().isNegative())
+            return;
 
         long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNanos);
         if (elapsedMs >= config.slowQueryWarnThreshold().toMillis()) {
@@ -301,7 +312,7 @@ public final class SqliteDatabase implements AutoCloseable {
         }
     }
 
-    private <T> T runSql(SqlWork<T> work) {
+    private <T> T runSql(SqlWork<T> work) throws RuntimeException {
         return runOnDbThread(() -> {
             try (Connection conn = openConnection()) {
                 applyPragmas(conn);
@@ -366,7 +377,7 @@ public final class SqliteDatabase implements AutoCloseable {
         cache.invalidateTable(tableName);
     }
 
-    private <T> List<T> loadQuery(String sql, RowMapper<T> mapper, Param<?>... params) throws Exception {
+    private <T> List<T> loadQuery(String sql, RowMapper<T> mapper, Param<?>... params) throws RuntimeException {
         return runSql(conn -> queryOnConnection(conn, sql, mapper, params));
     }
 
@@ -381,7 +392,7 @@ public final class SqliteDatabase implements AutoCloseable {
         }
     }
 
-    private <T> List<T> loadQueryBlocking(String sql, RowMapper<T> mapper, Param<?>... params) throws Exception {
+    private <T> List<T> loadQueryBlocking(String sql, RowMapper<T> mapper, Param<?>... params) throws RuntimeException {
         List<T> result = blockingCall("query", () -> loadQuery(sql, mapper, params));
         return result == null ? List.of() : result;
     }

@@ -217,28 +217,19 @@ final class SqliteQueryCache {
         }
     }
 
-    private static final class CacheEntry {
-        private final List<?> value;
-        private final long writtenAtNanos;
-        private final CompletableFuture<List<?>> loadingFuture;
-
-        private CacheEntry(List<?> value, long writtenAtNanos, CompletableFuture<List<?>> loadingFuture) {
-            this.value = value;
-            this.writtenAtNanos = writtenAtNanos;
-            this.loadingFuture = loadingFuture;
-        }
+    private record CacheEntry(List<?> value, long writtenAtNanos, CompletableFuture<List<?>> loadingFuture) {
 
         static CacheEntry fresh(List<?> value, long now) {
-            return new CacheEntry(value, now, null);
-        }
+                return new CacheEntry(value, now, null);
+            }
 
-        CacheEntry withLoadingFuture(CompletableFuture<List<?>> future) {
-            return new CacheEntry(this.value, this.writtenAtNanos, future);
-        }
+            CacheEntry withLoadingFuture(CompletableFuture<List<?>> future) {
+                return new CacheEntry(this.value, this.writtenAtNanos, future);
+            }
 
-        boolean isExpired(long now, Duration ttl) {
-            if (ttl == null || ttl.isZero() || ttl.isNegative()) return false;
-            return (now - writtenAtNanos) >= ttl.toNanos();
+            boolean isExpired(long now, Duration ttl) {
+                if (ttl == null || ttl.isZero() || ttl.isNegative()) return false;
+                return (now - writtenAtNanos) >= ttl.toNanos();
+            }
         }
-    }
 }

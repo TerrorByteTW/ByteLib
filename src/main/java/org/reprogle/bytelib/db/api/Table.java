@@ -1,12 +1,14 @@
 package org.reprogle.bytelib.db.api;
 
+import org.jspecify.annotations.NonNull;
+
 public record Table(String name) {
     public static Table of(String name) {
         return new Table(name);
     }
 
     @Override
-    public String toString() {
+    public @NonNull String toString() {
         return name;
     }
 
@@ -20,7 +22,7 @@ public record Table(String name) {
         }
 
         @Override
-        public String toString() {
+        public @NonNull String toString() {
             return table.name() + "." + name;
         }
     }
