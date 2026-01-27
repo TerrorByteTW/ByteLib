@@ -77,6 +77,7 @@ public class BoostedYamlPluginConfig implements BytePluginConfig {
     /**
      * Returns a loaded YAML doc by name, or null if not loaded.
      */
+    @Override
     public YamlDocument yaml(String name) {
         return docs.get(name);
     }
@@ -84,6 +85,7 @@ public class BoostedYamlPluginConfig implements BytePluginConfig {
     /**
      * Returns a loaded YAML doc by name, throwing if missing.
      */
+    @Override
     public YamlDocument require(String name) {
         YamlDocument doc = docs.get(name);
         if (doc == null) throw new IllegalStateException("YAML not loaded: " + name + " (" + meta.getName() + ")");
@@ -93,6 +95,7 @@ public class BoostedYamlPluginConfig implements BytePluginConfig {
     /**
      * Register (or replace) a YAML spec. Does not load it until reload/reload(name).
      */
+    @Override
     public void register(String name, YamlSpec spec) {
         specs.put(Objects.requireNonNull(name, "name"), Objects.requireNonNull(spec, "spec"));
     }
@@ -100,6 +103,7 @@ public class BoostedYamlPluginConfig implements BytePluginConfig {
     /**
      * Reload just one named YAML, using its registered spec.
      */
+    @Override
     public void reload(String name) {
         YamlSpec spec = specs.get(name);
         if (spec == null) throw new IllegalArgumentException("No YAML spec registered for: " + name);
