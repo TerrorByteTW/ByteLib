@@ -17,6 +17,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Singleton
 public class BoostedYamlPluginConfig implements BytePluginConfig {
@@ -26,9 +29,13 @@ public class BoostedYamlPluginConfig implements BytePluginConfig {
     private final Path dataDir;
     private final ComponentLogger logger;
 
-    private YamlDocument config;
-    private YamlDocument lang;
-    private String locale;
+    // Loaded documents by name (ex: "config", "lang", "menus", "items", ...)
+    private final Map<String, YamlDocument> docs = new ConcurrentHashMap<>();
+
+    // Registered specs by name
+    private final Map<String, YamlSpec> specs = new ConcurrentHashMap<>();
+
+    private volatile String locale = "en_US";
 
     @Inject
     public BoostedYamlPluginConfig(JavaPlugin plugin, PluginMeta meta, Path dataDirectory, ComponentLogger logger) {
@@ -37,17 +44,27 @@ public class BoostedYamlPluginConfig implements BytePluginConfig {
         this.dataDir = dataDirectory;
         this.logger = logger;
 
+        // Default built-ins
+        register("config", YamlSpec.of(dataDir.resolve("config.yml"), "config.yml", "file-version"));
+
+        // lang spec is dynamic (depends on locale), so we register a "template" key here
+        // and materialize it during reload() after config has been read.
+        // (We still keep it in specs so plugins can introspect.)
+        register("lang", YamlSpec.of(dataDir.resolve("lang").resolve("en_US.yml"), "lang/en_US.yml", "language-version"));
+
         reload(); // eager init is fine because this is child injector only
     }
 
+    // --- Helper methods ---
+
     @Override
     public YamlDocument config() {
-        return config;
+        return require("config");
     }
 
     @Override
     public YamlDocument lang() {
-        return lang;
+        return require("lang");
     }
 
     @Override
@@ -55,42 +72,116 @@ public class BoostedYamlPluginConfig implements BytePluginConfig {
         return locale;
     }
 
+    // --- Load a specific YAML file ---
+
+    /**
+     * Returns a loaded YAML doc by name, or null if not loaded.
+     */
+    public YamlDocument yaml(String name) {
+        return docs.get(name);
+    }
+
+    /**
+     * Returns a loaded YAML doc by name, throwing if missing.
+     */
+    public YamlDocument require(String name) {
+        YamlDocument doc = docs.get(name);
+        if (doc == null) throw new IllegalStateException("YAML not loaded: " + name + " (" + meta.getName() + ")");
+        return doc;
+    }
+
+    /**
+     * Register (or replace) a YAML spec. Does not load it until reload/reload(name).
+     */
+    public void register(String name, YamlSpec spec) {
+        specs.put(Objects.requireNonNull(name, "name"), Objects.requireNonNull(spec, "spec"));
+    }
+
+    /**
+     * Reload just one named YAML, using its registered spec.
+     */
+    public void reload(String name) {
+        YamlSpec spec = specs.get(name);
+        if (spec == null) throw new IllegalArgumentException("No YAML spec registered for: " + name);
+
+        try {
+            Files.createDirectories(spec.outFile().getParent());
+
+            YamlDocument doc = loadYaml(
+                    spec.outFile().toFile(),
+                    spec.resourcePath(),
+                    spec.versionKey(),
+                    spec.requiredResource()
+            );
+
+            docs.put(name, doc);
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to load YAML '" + name + "' for " + meta.getName(), e);
+        }
+    }
+
+    /**
+     * Reload everything (config first, then locale, then lang, then any other registered YAML).
+     */
     @Override
     public void reload() {
         try {
             Files.createDirectories(dataDir);
 
-            this.config = loadYaml(
-                    dataDir.resolve("config.yml").toFile(),
-                    "config.yml",
-                    "file-version"
-            );
+            // 1) Load config first (locale depends on it)
+            reload("config");
 
-            String configured = config.getString("language");
-            boolean bypass = config.getBoolean("bypass-language-check");
-
+            YamlDocument cfg = require("config");
+            String configured = cfg.getString("language");
+            boolean bypass = cfg.getBoolean("bypass-language-check");
             this.locale = resolveLocale(configured, bypass);
 
+            // 2) Materialize lang spec for resolved locale, then load it
             Path langDir = dataDir.resolve("lang");
             Files.createDirectories(langDir);
 
-            this.lang = loadYaml(
-                    langDir.resolve(locale + ".yml").toFile(),
+            YamlSpec langSpec = YamlSpec.of(
+                    langDir.resolve(locale + ".yml"),
                     "lang/" + locale + ".yml",
                     "language-version"
             );
+            // overwrite "lang" spec to point at the active locale file
+            specs.put("lang", langSpec);
+            reload("lang");
 
-            logger.info("Loaded config + language (locale={}) for {}", locale, meta.getName());
+            // 3) Load any other registered docs (but avoid reloading config/lang again)
+            for (String name : specs.keySet()) {
+                if (name.equals("config") || name.equals("lang")) continue;
+                reload(name);
+            }
+
+            logger.info("Loaded YAML (locale={}) for {}. Keys={}", locale, meta.getName(), specs.keySet());
         } catch (IOException e) {
-            throw new IllegalStateException("Failed to load config/language for " + meta.getName(), e);
+            throw new IllegalStateException("Failed to load YAML for " + meta.getName(), e);
         }
     }
 
-    private YamlDocument loadYaml(File outFile, String resourcePath, String versionKey) throws IOException {
-        // plugin.getResource returns InputStream or null
+    private YamlDocument loadYaml(
+            File outFile,
+            String resourcePath,
+            String versionKey,
+            boolean requiredResource
+    ) throws IOException {
         InputStream resource = plugin.getResource(resourcePath);
+
         if (resource == null) {
-            throw new IllegalStateException("Missing resource in jar: " + resourcePath);
+            if (requiredResource) {
+                throw new IllegalStateException("Missing resource in jar: " + resourcePath);
+            }
+
+            // Allow custom external-only config: create an empty file if missing.
+            // (BoostedYAML needs a source InputStream; easiest is to fall back to an empty YAML stream.)
+            if (!outFile.exists()) {
+                Files.createDirectories(outFile.toPath().getParent());
+                Files.writeString(outFile.toPath(), "# Created by " + meta.getName() + "\n");
+            }
+
+            resource = new java.io.ByteArrayInputStream(new byte[0]);
         }
 
         YamlDocument doc = YamlDocument.create(
@@ -114,7 +205,6 @@ public class BoostedYamlPluginConfig implements BytePluginConfig {
         if (configured == null || configured.isBlank()) return "en_US";
         if (bypass) return configured;
 
-        // simplest “supported” check: does the resource exist in the jar?
         String resourcePath = "lang/" + configured + ".yml";
         try (InputStream ignored = plugin.getResource(resourcePath)) {
             if (ignored != null) return configured;
@@ -126,4 +216,19 @@ public class BoostedYamlPluginConfig implements BytePluginConfig {
         return "en_US";
     }
 
+    /**
+     * Small value object describing how to load a YAML.
+     */
+    public record YamlSpec(Path outFile, String resourcePath, String versionKey, boolean requiredResource) {
+        public static YamlSpec of(Path outFile, String resourcePath, String versionKey) {
+            return new YamlSpec(outFile, resourcePath, versionKey, true);
+        }
+
+        /**
+         * Use this if you want a file that may not exist in the jar (external-only).
+         */
+        public static YamlSpec externalOnly(Path outFile, String versionKey) {
+            return new YamlSpec(outFile, "", versionKey, false);
+        }
+    }
 }
