@@ -12,6 +12,7 @@ import io.papermc.paper.plugin.configuration.PluginMeta;
 import net.kyori.adventure.text.logger.slf4j.ComponentLogger;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -171,15 +172,16 @@ public class BoostedYamlPluginConfig implements BytePluginConfig {
             String versionKey,
             boolean requiredResource
     ) throws IOException {
-        InputStream resource = plugin.getResource(resourcePath);
+
+        InputStream resource = resourcePath.isEmpty()
+                ? null
+                : plugin.getResource(resourcePath);
 
         if (resource == null) {
-            if (requiredResource) {
+            if (requiredResource && !resourcePath.isEmpty()) {
                 throw new IllegalStateException("Missing resource in jar: " + resourcePath);
             }
 
-            // Allow custom external-only config: create an empty file if missing.
-            // (BoostedYAML needs a source InputStream; easiest is to fall back to an empty YAML stream.)
             if (!outFile.exists()) {
                 Files.createDirectories(outFile.toPath().getParent());
                 Files.writeString(outFile.toPath(), "# Created by " + meta.getName() + "\n");
@@ -188,22 +190,28 @@ public class BoostedYamlPluginConfig implements BytePluginConfig {
             resource = new java.io.ByteArrayInputStream(new byte[0]);
         }
 
+        UpdaterSettings updaterSettings =
+                (versionKey == null)
+                        ? UpdaterSettings.DEFAULT
+                        : UpdaterSettings.builder()
+                        .setVersioning(new BasicVersioning(versionKey))
+                        .setOptionSorting(UpdaterSettings.OptionSorting.SORT_BY_DEFAULTS)
+                        .build();
+
         YamlDocument doc = YamlDocument.create(
                 outFile,
                 resource,
                 GeneralSettings.DEFAULT,
                 LoaderSettings.builder().setAutoUpdate(true).build(),
                 DumperSettings.DEFAULT,
-                UpdaterSettings.builder()
-                        .setVersioning(new BasicVersioning(versionKey))
-                        .setOptionSorting(UpdaterSettings.OptionSorting.SORT_BY_DEFAULTS)
-                        .build()
+                updaterSettings
         );
 
         doc.update();
         doc.save();
         return doc;
     }
+
 
     private String resolveLocale(String configured, boolean bypass) {
         if (configured == null || configured.isBlank()) return "en_US";
@@ -223,16 +231,27 @@ public class BoostedYamlPluginConfig implements BytePluginConfig {
     /**
      * Small value object describing how to load a YAML.
      */
-    public record YamlSpec(Path outFile, String resourcePath, String versionKey, boolean requiredResource) {
+    public record YamlSpec(
+            Path outFile,
+            String resourcePath,
+            @Nullable String versionKey,
+            boolean requiredResource
+    ) {
         public static YamlSpec of(Path outFile, String resourcePath, String versionKey) {
             return new YamlSpec(outFile, resourcePath, versionKey, true);
         }
 
-        /**
-         * Use this if you want a file that may not exist in the jar (external-only).
-         */
+        public static YamlSpec of(Path outFile, String resourcePath) {
+            return new YamlSpec(outFile, resourcePath, null, true);
+        }
+
+        public static YamlSpec externalOnly(Path outFile) {
+            return new YamlSpec(outFile, "", null, false);
+        }
+
         public static YamlSpec externalOnly(Path outFile, String versionKey) {
             return new YamlSpec(outFile, "", versionKey, false);
         }
     }
+
 }
