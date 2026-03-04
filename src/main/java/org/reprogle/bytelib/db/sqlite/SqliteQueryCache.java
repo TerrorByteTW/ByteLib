@@ -37,7 +37,8 @@ final class SqliteQueryCache {
 
     <T> List<T> query(String sql, RowMapper<T> mapper, Param<?>[] params, QueryLoader loader) {
         SqliteConfig.CacheConfig cache = config.cache();
-        if (cache.maxSize() <= 0) {
+        int maxSize = cache.maxSize();
+        if (isCachingDisabled(maxSize)) {
             return load(loader, sql, mapper, params);
         }
 
@@ -119,7 +120,7 @@ final class SqliteQueryCache {
 
     private void evictIfNeeded() {
         int maxSize = config.cache().maxSize();
-        if (maxSize <= 0) return;
+        if (isCachingDisabled(maxSize) || maxSize == -1) return;
         int size = queryCache.size();
         if (size <= maxSize) return;
 
@@ -172,6 +173,11 @@ final class SqliteQueryCache {
 
     private static RuntimeException wrap(Throwable t) {
         return (t instanceof RuntimeException re) ? re : new RuntimeException(t);
+    }
+
+    private static boolean isCachingDisabled(int maxSize) {
+        // Setting to 0 disables cache, setting to -1 disables size limits, setting to <= -2 also disables cache
+        return maxSize == 0 || maxSize < -1;
     }
 
     private record QueryKey(String sql, String sqlLower, List<ParamKey> params, RowMapper<?> mapper) {
