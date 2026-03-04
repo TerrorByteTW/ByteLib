@@ -23,7 +23,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
-@SuppressWarnings({ "UnstableApiUsage", "unused" })
+@SuppressWarnings({ "UnstableApiUsage" })
 public final class BytePluginBootstrap implements PluginBootstrap {
     @Override
     public void bootstrap(BootstrapContext context) {

@@ -35,7 +35,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-@SuppressWarnings("unused")
 public final class SqliteDatabase implements AutoCloseable {
     private final JavaPlugin plugin;
     private final Path dbFile;

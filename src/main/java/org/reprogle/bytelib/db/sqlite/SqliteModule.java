@@ -17,7 +17,6 @@ public final class SqliteModule extends AbstractModule {
     private final SqliteConfig fixedConfig;
     private final Function<BytePluginConfig, SqliteConfig> configFactory;
 
-    @SuppressWarnings("unused")
     public SqliteModule(String fileName) {
         this(fileName, SqliteConfig.defaults());
     }
@@ -28,14 +27,12 @@ public final class SqliteModule extends AbstractModule {
         this.configFactory = null;
     }
 
-    @SuppressWarnings("unused")
     public SqliteModule(String fileName, Function<BytePluginConfig, SqliteConfig> configFactory) {
         this.fileName = Objects.requireNonNull(fileName, "fileName");
         this.fixedConfig = null;
         this.configFactory = Objects.requireNonNull(configFactory, "configFactory");
     }
 
-    @SuppressWarnings("unused")
     @Provides
     @Singleton
     public SqliteConfig sqliteConfig(Injector injector) {
@@ -56,7 +53,6 @@ public final class SqliteModule extends AbstractModule {
         return Objects.requireNonNull(resolved, "configFactory returned null");
     }
 
-    @SuppressWarnings("unused")
     @Provides
     @Singleton
     public SqliteDatabase sqliteDatabase(JavaPlugin plugin, Path dataDirectory, SqliteConfig config) {
