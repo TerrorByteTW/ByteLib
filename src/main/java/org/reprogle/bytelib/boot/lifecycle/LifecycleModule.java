@@ -7,8 +7,10 @@ public final class LifecycleModule extends AbstractModule {
 
     @Override
     protected void configure() {
-        // This enables Set<PluginLifecycle> injection
+        // External/plugin-contributed lifecycles (default set for compatibility).
         Multibinder.newSetBinder(binder(), PluginLifecycle.class);
+        // ByteLib internal lifecycles.
+        Multibinder.newSetBinder(binder(), PluginLifecycle.class, InternalLifecycles.class);
 
         // Core runner & fan-out
         bind(CompositeLifecycle.class);

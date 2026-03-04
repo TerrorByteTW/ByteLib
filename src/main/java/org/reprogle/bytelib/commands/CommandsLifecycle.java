@@ -27,3 +27,4 @@ public final class CommandsLifecycle implements PluginLifecycle {
         });
     }
 }
+

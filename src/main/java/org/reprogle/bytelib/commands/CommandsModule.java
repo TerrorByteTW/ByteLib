@@ -2,6 +2,7 @@ package org.reprogle.bytelib.commands;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.multibindings.Multibinder;
+import org.reprogle.bytelib.boot.lifecycle.InternalLifecycles;
 import org.reprogle.bytelib.boot.lifecycle.PluginLifecycle;
 
 public final class CommandsModule extends AbstractModule {
@@ -10,8 +11,8 @@ public final class CommandsModule extends AbstractModule {
         // Allow plugins to contribute command registrations
         Multibinder.newSetBinder(binder(), CommandRegistration.class);
 
-        // Ensure the lifecycle hook runs
-        Multibinder.newSetBinder(binder(), PluginLifecycle.class)
+        // Ensure the lifecycle hook runs before plugin lifecycles.
+        Multibinder.newSetBinder(binder(), PluginLifecycle.class, InternalLifecycles.class)
                 .addBinding()
                 .to(CommandsLifecycle.class);
     }
