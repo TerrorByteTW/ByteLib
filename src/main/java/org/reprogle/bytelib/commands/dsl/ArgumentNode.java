@@ -26,6 +26,7 @@ import org.reprogle.bytelib.commands.CommandFactory;
 public final class ArgumentNode<T> {
     private final RequiredArgumentBuilder<CommandSourceStack, T> builder;
     private final List<Object> children = new ArrayList<>();
+    private Command<CommandSourceStack> executor;
 
     /**
      * Creates a new ArgumentNode with the specified name and argument type.
@@ -44,7 +45,9 @@ public final class ArgumentNode<T> {
      * @return this ArgumentNode for method chaining
      */
     public ArgumentNode<T> executes(Command<CommandSourceStack> callback) {
+        Objects.requireNonNull(callback, "callback");
         builder.executes(callback);
+        this.executor = callback;
         return this;
     }
 
@@ -117,11 +120,30 @@ public final class ArgumentNode<T> {
      * @return the built RequiredArgumentBuilder
      */
     RequiredArgumentBuilder<CommandSourceStack, T> build() {
+        return build(null);
+    }
+
+    /**
+     * Builds the Brigadier RequiredArgumentBuilder with all configured children.
+     * 
+     * <p>
+     * If this node does not define an executor, it inherits the closest parent
+     * executor to allow fallback execution on deeper nodes.
+     * 
+     * @param inheritedExecutor the closest parent executor, or null if none exists
+     * @return the built RequiredArgumentBuilder
+     */
+    RequiredArgumentBuilder<CommandSourceStack, T> build(Command<CommandSourceStack> inheritedExecutor) {
+        final Command<CommandSourceStack> effectiveExecutor = executor != null ? executor : inheritedExecutor;
+        if (executor == null && inheritedExecutor != null) {
+            builder.executes(inheritedExecutor);
+        }
+
         for (Object child : children) {
             if (child instanceof LiteralNode literal) {
-                builder.then(literal.build());
+                builder.then(literal.build(effectiveExecutor));
             } else if (child instanceof ArgumentNode<?> arg) {
-                builder.then(arg.build());
+                builder.then(arg.build(effectiveExecutor));
             }
         }
         return builder;

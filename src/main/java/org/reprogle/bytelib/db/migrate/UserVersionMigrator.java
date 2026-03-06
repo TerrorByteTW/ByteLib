@@ -6,6 +6,7 @@ import org.reprogle.bytelib.db.sqlite.SqliteDatabase;
 import java.util.Comparator;
 import java.util.List;
 
+@SuppressWarnings("unused")
 public final class UserVersionMigrator {
     private final List<MigrationStep> steps;
     private final String anchorTable;

@@ -1,11 +1,13 @@
 package org.reprogle.bytelib.commands.dsl;
 
 import com.mojang.brigadier.Command;
+import com.mojang.brigadier.tree.LiteralCommandNode;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Predicate;
 
 import org.reprogle.bytelib.commands.CommandFactory;
@@ -23,6 +25,7 @@ import org.reprogle.bytelib.commands.CommandFactory;
 public final class LiteralNode {
     private final LiteralArgumentBuilder<CommandSourceStack> builder;
     private final List<Object> children = new ArrayList<>();
+    private Command<CommandSourceStack> executor;
 
     /**
      * Creates a new LiteralNode with the specified name.
@@ -46,7 +49,7 @@ public final class LiteralNode {
      * @return this LiteralNode for method chaining
      */
     public LiteralNode requires(Predicate<CommandSourceStack> predicate) {
-        builder.requires(predicate::test);
+        builder.requires(predicate);
         return this;
     }
 
@@ -57,7 +60,9 @@ public final class LiteralNode {
      * @return this LiteralNode for method chaining
      */
     public LiteralNode executes(Command<CommandSourceStack> callback) {
+        Objects.requireNonNull(callback, "callback");
         builder.executes(callback);
+        this.executor = callback;
         return this;
     }
 
@@ -101,13 +106,42 @@ public final class LiteralNode {
      * @return the built LiteralArgumentBuilder
      */
     LiteralArgumentBuilder<CommandSourceStack> build() {
+        return build(null);
+    }
+
+    /**
+     * Builds the Brigadier LiteralArgumentBuilder with all configured children.
+     * 
+     * <p>
+     * If this node does not define an executor, it inherits the closest parent
+     * executor to allow fallback execution on deeper nodes.
+     * 
+     * @param inheritedExecutor the closest parent executor, or null if none exists
+     * @return the built LiteralArgumentBuilder
+     */
+    LiteralArgumentBuilder<CommandSourceStack> build(Command<CommandSourceStack> inheritedExecutor) {
+        final Command<CommandSourceStack> effectiveExecutor = executor != null ? executor : inheritedExecutor;
+        if (executor == null && inheritedExecutor != null) {
+            builder.executes(inheritedExecutor);
+        }
+
         for (Object child : children) {
             if (child instanceof LiteralNode literal) {
-                builder.then(literal.build());
+                builder.then(literal.build(effectiveExecutor));
             } else if (child instanceof ArgumentNode<?> arg) {
-                builder.then(arg.build());
+                builder.then(arg.build(effectiveExecutor));
             }
         }
         return builder;
+    }
+
+    /**
+     * Converts this DSL node tree into a Brigadier command node that can be
+     * registered directly with Paper commands registrar.
+     *
+     * @return the built Brigadier LiteralCommandNode
+     */
+    public LiteralCommandNode<CommandSourceStack> toCommandNode() {
+        return build().build();
     }
 }

@@ -10,7 +10,7 @@ plugins {
 }
 
 project.group = "org.reprogle"
-project.version = "1.0"
+project.version = "1.1"
 project.description =
     "A library for wrapping common tasks my plugins do, such as SQLite storage or command creation/registration"
 

@@ -37,6 +37,13 @@ public final class PermissionChecks {
     }
 
     /**
+     * Creates a predicate that returns true if the sender is an operator.
+     *
+     * @return a predicate that checks if sender is an operator
+     */
+    public static Predicate<CommandSourceStack> isOp() { return stack -> stack.getSender().isOp(); }
+
+    /**
      * Creates a predicate that returns true if the sender is a player.
      * 
      * @return a predicate that checks if sender is a player
