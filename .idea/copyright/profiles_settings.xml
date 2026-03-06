@@ -1,0 +1,7 @@
+<component name="CopyrightManager">
+  <settings default="ByteLib Copyright">
+    <module2copyright>
+      <element module="All" copyright="ByteLib Copyright" />
+    </module2copyright>
+  </settings>
+</component>
