@@ -17,4 +17,4 @@ architecture across all plugins that use it. ByteLib currently powers
 [DimensionPause](https://github.com/TerrorByteTW/DimensionPause), and plans to convert
 [Honeypot](https://github.com/TerrorByteTW/Honeypot) to ByteLib are in the works
 
-Check out the [Wiki](https://github.com/TerrorByteTW/ByteLib/wiki) to get started
+Check out the [Wiki](https://terrorbytetw.github.io/ByteLib/welcome-to-bytelib.html) to get started
