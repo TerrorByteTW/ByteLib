@@ -1,4 +1,4 @@
-# Quick Start
+# Set up SQLite Module
 
 To get started, in your plugin's [wiring class](Bootstrapping.md#bootstrapping-in-detail), add `SqliteModule()` to your
 `modules()` function.
