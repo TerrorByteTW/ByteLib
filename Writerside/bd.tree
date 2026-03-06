@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE instance-profile
+        SYSTEM "https://resources.jetbrains.com/writerside/1.0/product-profile.dtd">
+
+<instance-profile id="bd"
+                 name="ByteLib Documentation"
+                 start-page="Welcome-to-ByteLib.md">
+
+    <toc-element topic="Welcome-to-ByteLib.md"/>
+    <toc-element topic="Getting-Started.md">
+        <toc-element topic="Bootstrapping.md"/>
+        <toc-element topic="Plugin-Loader.md"/>
+        <toc-element topic="Core-Design-Principles.md"/>
+    </toc-element>
+    <toc-element topic="Configuration-Translation.md">
+        <toc-element topic="Creating-Configuration-Files.md"/>
+        <toc-element topic="Handling-Translations.md"/>
+    </toc-element>
+    <toc-element topic="Lifecycle-API.md"/>
+    <toc-element topic="Commands-API.md"/>
+    <toc-element topic="SQLite-API.md"/>
+</instance-profile>

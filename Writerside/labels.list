@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE labels SYSTEM "https://resources.jetbrains.com/writerside/1.0/labels-list.dtd">
+<labels xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/labels.xsd">
+    <primary-label id="subject-to-change" name="Subject to Change" short-name="StC" color="yellow">
+        This feature is considered stable, but not yet complete and is subject to change in the future. Backwards
+        compatibility is not guaranteed.
+    </primary-label>
+    <secondary-label id="wip" name="Work In Progress" color="green">
+        Apologies for the mess, this page is needing some love! It's currently a Work in Progress and will be cleaned up
+        soon.
+    </secondary-label>
+</labels>
+

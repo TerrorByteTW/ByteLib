@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE terms SYSTEM "https://resources.jetbrains.com/writerside/1.0/glossary.dtd">
+<terms>
+    <term name="bootstrap">
+        The proces of setting up a project, environment, or program before the main development, use, and/or execution
+        begins.
+    </term>
+    <term name="loader">
+        Part of the Paper Plugin API; responsible for creating the expected, final classpath of your plugin at runtime.
+    </term>
+</terms>

@@ -1,0 +1,139 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE topic SYSTEM "https://resources.jetbrains.com/writerside/1.0/html-entities.dtd">
+<topic xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/topic.v2.xsd"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" is-library="true" id="code_snippets" title="Code Snippets">
+    <snippet id="paper-plugin">
+        <code-block lang="yaml">
+             name: DimensionPause
+             version: "2.0.0"
+             main: org.reprogle.dimensionpause.DimensionPausePlugin
+             api-version: "1.21"
+
+             bootstrapper: org.reprogle.bytelib.BytePluginBootstrap
+             loader: org.reprogle.bytelib.BytePluginLoader
+        </code-block>
+    </snippet>
+    <snippet id="bytelib-plugin">
+        <code-block lang="java">
+            public final class DimensionPausePlugin extends ByteLibPlugin {
+                @Inject
+                public DimensionPausePlugin(Injector injector, PluginMeta meta, Path dataDir, ComponentLogger logger) {
+                    super(injector, meta, dataDir, logger);
+                }
+            }
+        </code-block>
+    </snippet>
+    <snippet id="bytelib-module">
+        <code-block lang="java">
+            public final class DimensionPauseModule extends AbstractModule {
+                @Override
+                protected void configure() {
+                    // Core services
+                    bind(CommandFeedback.class).in(Singleton.class);
+
+                    // Subcommands
+                    Multibinder&lt;SubCommand&gt; subcommandBinder = Multibinder.newSetBinder(binder(), SubCommand.class);
+                    subcommandBinder.addBinding().to(Reload.class);
+                    subcommandBinder.addBinding().to(State.class);
+                    subcommandBinder.addBinding().to(Toggle.class);
+
+                    // Lifecycle hooks
+                    Multibinder&lt;PluginLifecycle&gt; lifecycles = Multibinder.newSetBinder(binder(), PluginLifecycle.class);
+                    lifecycles.addBinding().to(DimensionPauseLifecycle.class);
+
+                    // Commands
+                    Multibinder.newSetBinder(binder(), CommandRegistration.class)
+                            .addBinding()
+                            .to(DPCommandRegistration.class);
+                }
+            }
+        </code-block>
+    </snippet>
+    <snippet id="bytelib-lifecycle">
+        <code-block lang="java">
+            public class DimensionPauseLifecycle implements PluginLifecycle {
+                private final ComponentLogger logger;
+
+                @Inject
+                public DimensionPauseLifecycle(ComponentLogger logger) {
+                    this.logger = logger;
+                }
+
+                @Override
+                public void onEnable() {
+                    logger.info("Dimension Pause has been loaded");
+                }
+
+                @Override
+                public void onDisable() {
+                    logger.info("Dimension Pause is shutting down");
+                }
+            }
+        </code-block>
+    </snippet>
+    <snippet id="bytelib-wiring">
+        <code-block lang="java">
+            // Create a class named `[MainClass]Wiring.class` and implement PluginWiring
+            // Ensure it returns your Module you made in step 3
+            public static class DimensionPauseWiring implements PluginWiring {
+                @Override
+                public List&lt;Module&gt; modules(PluginMeta meta, Path dataDir, ComponentLogger logger) {
+                    return List.of(
+                            new DimensionPauseModule()
+                    );
+                }
+            }
+
+            //
+            // OR
+            //
+            // Nest a `Wiring` class in your plugin's main class
+            public final class DimensionPausePlugin extends ByteLibPlugin {
+
+                @Inject
+                public DimensionPausePlugin(Injector injector, PluginMeta meta, Path dataDir, ComponentLogger logger) {
+                    super(injector, meta, dataDir, logger);
+                }
+
+                @SuppressWarnings("unused")
+                public static class Wiring implements PluginWiring {
+                    @Override
+                    public List&lt;Module&gt; modules(PluginMeta meta, Path dataDir, ComponentLogger logger) {
+                        return List.of(
+                                new DimensionPauseModule()
+                        );
+                    }
+                }
+            }
+
+            //
+            // OR
+            //
+            // Create a class that implements PluginWiring, and allow the `ServiceLoader` to attempt to locate it (Not recommended)
+            public static class PluginWiringSetup extends PluginWiring {
+                @Override
+                public List&lt;Module&gt; modules(PluginMeta meta, Path dataDir, ComponentLogger logger) {
+                    return List.of(
+                            new DimensionPauseModule()
+                    );
+                }
+            }
+        </code-block>
+    </snippet>
+    <snippet id="bytelib-loader">
+        <code-block lang="java">
+            @SuppressWarnings("UnstableApiUsage")
+            public class BytePluginLoader implements PluginLoader {
+                @Override
+                public void classloader(PluginClasspathBuilder classpathBuilder) {
+                    MavenLibraryResolver resolver = new MavenLibraryResolver();
+
+                    resolver.addDependency(new Dependency(new DefaultArtifact("dev.dejvokep:boosted-yaml:1.3.7"), null));
+                    resolver.addDependency(new Dependency(new DefaultArtifact("com.google.inject:guice:7.0.0"), null));
+
+                    classpathBuilder.addLibrary(resolver);
+                }
+            }
+        </code-block>
+    </snippet>
+</topic>
