@@ -1,15 +1,18 @@
 # ByteLib Bootstrapper
 
-The ByteLib bootstrapper is the heart of ByteLib. It handles configuring Google Guice for dependency injection, handling
-lifecycle hooks, registering commands, and so much more. ByteLib lives and dies by its bootstrapper.
+The ByteLib <tooltip term="bootstrap">bootstrapper</tooltip> is the heart of ByteLib. It handles configuring Google
+Guice for dependency injection, handling
+lifecycle hooks, registering commands, initializing your plugin, and so much more. ByteLib lives and dies by its bootstrapper.
 
-> ByteLib's bootstrapper is **_mandatory_** to use ByteLib, as all ByteLib APIs depend on it. ByteLib's bootstrapper
-> cannot be substituted or configured. If you wish to use your own bootstrapper, you cannot use ByteLib.
+> Paper-native plugins have unique properties that regular Bukkit/Spigot plugins do not, such as classloading isolation.
+> Be sure to [review the differences](https://docs.papermc.io/paper/dev/getting-started/paper-plugins/#differences)
+> between the two before continuing!
 > {style="warning"}
 
 ## Bootstrap a Plugin
 
-"Bootstrapping a plugin" with ByteLib just means setting up your plugin to use ByteLib. Because Paper Plugins define the
+"Bootstrapping a plugin" with ByteLib just means setting up your plugin to use ByteLib. If you want to use ByteLib,
+then using ByteLib's bootstrapper is mandatory; it cannot be substituted or modified. Because Paper Plugins define the
 bootstrapper and loader via config, you must manually set this up for your plugins that use ByteLib.
 
 The process is as follows:
@@ -34,7 +37,7 @@ extend `ByteLibPlugin`, which will be done in the next step.
 
 The <tooltip term="loader">`loader`</tooltip> in a Paper Plugin allows the creation of an expected/dynamic environment
 for your plugin to load into.
-According to Paper's docs, this only applies to creating the expected classpath for the plugin, e.g. supplying external
+According to Paper's docs, this only applies to creating the expected classpath for the plugin, e.g., supplying external
 libraries to the plugin. As of now, ByteLib's loader only adds the BoostedYAML and Google Guice dependencies into the
 plugin's classpath. It is _not_ configurable yet, but plans to make this configurable in the future are in the works.
 
@@ -45,9 +48,9 @@ However, for most developers, it's recommended to use it anyway.
 
 <include from="code_snippets.topic" element-id="bytelib-plugin" />
 
-> **DO NOT EXPECT** to be able to inject your plugin's main class! ByteLib binds `JavaPlugin`, `Plugin`, and your
-> plugin's main class to `ByteLibPlugin`.
-> While you _may_ inject those classes, it's recommended that you inject `ByteLibPlugin` instead.
+> **Do not expect** to be able to inject your plugin's main class. ByteLib binds `JavaPlugin`, `Plugin`, and your
+> plugin's main class to `ByteLibPlugin`, so injecting any of these classes will return the `ByteLibPlugin` object.
+> While you _may_ inject those classes, it's recommended that you inject `ByteLibPlugin` explicitly.
 > {style="warning"}
 
 3. Create a Module which is used to configure Guice bindings (Example from DimensionPause)

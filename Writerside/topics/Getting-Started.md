@@ -1,12 +1,12 @@
 # Getting Started
 
 To better understand the design of ByteLib and how it works, a good place to start is to review
-the [core design priciples](Core-Design-Principles.md) of the library. If you're not interested in the technical
+the [core design principles](Core-Design-Principles.md) of the library. If you're not interested in the technical
 nitty-gritty, you can skip this.
 
 ByteLib is built based off of the
 experimental [Paper Plugin API](https://docs.papermc.io/paper/dev/getting-started/paper-plugins/). This API requires
-some manual configuration on the part of every developer, so ByteLib has this process well documented.
+some manual configuration on the part of every developer, so ByteLib has this process well-documented.
 
 - Review the [Bootstrapping](Bootstrapping.md) topic to learn how to <tooltip term="bootstrap">bootstrap</tooltip> your
   plugin to use ByteLib.
@@ -14,12 +14,14 @@ some manual configuration on the part of every developer, so ByteLib has this pr
 
 ## ByteLib APIs
 
-ByteLib provides a number of APIs that make plugin development easier. To learn about these APIs, head to their
-respective topics.
+ByteLib provides a number of APIs that make plugin development easier. All of ByteLib's APIs keep Dependency Injection
+at their center, making it extremely easy to integrate them anywhere in your plugin.
 
-### Config & Translation API
+To learn about these APIs, head to their respective topics.
 
-The [Config & Translation API](Configuration-Translation.md) is an opinionated, lightweight wrapper around the
+### Config API
+
+The [Config API](Configuration-Translation.md) is an opinionated, lightweight wrapper around the
 BoostedYAML library for more easily interacting with configuration files.
 
 This API includes utility classes for handling translations as well and natively supports MiniMessage.

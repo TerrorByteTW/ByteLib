@@ -12,6 +12,9 @@
         </variables>
     </build-profile>
 
+    <sitemap change-frequency="monthly" />
+    <llms-txt single-file="true"/>
+
     <footer>
         <copyright>2026 Nate Reprogle</copyright>
         <link href="https://github.com/TerrorByteTW/ByteLib">ByteLib Source Code</link>
