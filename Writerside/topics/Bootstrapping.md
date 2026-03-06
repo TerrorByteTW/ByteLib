@@ -3,6 +3,10 @@
 The ByteLib bootstrapper is the heart of ByteLib. It handles configuring Google Guice for dependency injection, handling
 lifecycle hooks, registering commands, and so much more. ByteLib lives and dies by its bootstrapper.
 
+> ByteLib's bootstrapper is **_mandatory_** to use ByteLib, as all ByteLib APIs depend on it. ByteLib's bootstrapper
+> cannot be substituted or configured. If you wish to use your own bootstrapper, you cannot use ByteLib.
+> {style="warning"}
+
 ## Bootstrap a Plugin
 
 "Bootstrapping a plugin" with ByteLib just means setting up your plugin to use ByteLib. Because Paper Plugins define the
@@ -22,12 +26,14 @@ The process is as follows:
 
 <include from="code_snippets.topic" element-id="paper-plugin" />
 
-The <tooltip term="bootstrap">`bootstrapper`</tooltip> in a Paper Plugin allows you to change the way your plugin is initialized, allowing you to pass
+The <tooltip term="bootstrap">`bootstrapper`</tooltip> in a Paper Plugin allows you to change the way your plugin is
+initialized, allowing you to pass
 values into your plugin constructor. In ByteLib, the `bootstrapper` is responsible for configuring all the internal
 Guice modules, injecting dependencies, and more. The ByteLib bootstrapper requires the main class of your plugin to
 extend `ByteLibPlugin`, which will be done in the next step.
 
-The <tooltip term="loader">`loader`</tooltip> in a Paper Plugin allows the creation of an expected/dynamic environment for your plugin to load into.
+The <tooltip term="loader">`loader`</tooltip> in a Paper Plugin allows the creation of an expected/dynamic environment
+for your plugin to load into.
 According to Paper's docs, this only applies to creating the expected classpath for the plugin, e.g. supplying external
 libraries to the plugin. As of now, ByteLib's loader only adds the BoostedYAML and Google Guice dependencies into the
 plugin's classpath. It is _not_ configurable yet, but plans to make this configurable in the future are in the works.
@@ -59,3 +65,9 @@ However, for most developers, it's recommended to use it anyway.
 
 If this seems complex, it's because it is. If DI wasn't involved, this would be much easier,
 but DI provides the immediate benefit of decoupling your code, making it easier to develop.
+
+## Next Steps
+
+After you've bootstrapped your plugin, be sure to configure the [loader](Plugin-Loader.md) and
+the [Config API](Configuration-Translation.md). ByteLib requires the Config API to be configured
+before it can properly bootstrap your plugin.

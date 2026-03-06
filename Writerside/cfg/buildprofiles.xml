@@ -3,7 +3,9 @@
 <buildprofiles xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/build-profiles.xsd"
                xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 
-    <variables></variables>
+    <variables>
+        <content-max-width>1450</content-max-width>
+    </variables>
     <build-profile instance="bd">
         <variables>
             <noindex-content>false</noindex-content>

@@ -14,9 +14,27 @@
     </toc-element>
     <toc-element topic="Configuration-Translation.md">
         <toc-element topic="Creating-Configuration-Files.md"/>
+        <toc-element topic="Adding-Custom-Configurations.md"/>
         <toc-element topic="Handling-Translations.md"/>
     </toc-element>
-    <toc-element topic="Lifecycle-API.md"/>
-    <toc-element topic="Commands-API.md"/>
-    <toc-element topic="SQLite-API.md"/>
+    <toc-element topic="Lifecycle-API.md">
+        <toc-element topic="Using-Lifecycles.md"/>
+        <toc-element topic="Lifecycle-Prioritization.md"/>
+    </toc-element>
+    <toc-element topic="Commands-API.md">
+        <toc-element topic="Quick-Start.md"/>
+        <toc-element topic="Create-a-Command.md"/>
+        <toc-element topic="Permission-Checks.md"/>
+        <toc-element topic="Executors.md"/>
+        <toc-element topic="Arguments-Suggestions.md"/>
+        <toc-element topic="DslCommandRegistration.md"/>
+    </toc-element>
+    <toc-element topic="SQLite-API.md">
+        <toc-element topic="Quick-Start-SQLite.md"/>
+        <toc-element topic="Configuring-SQLite-API.md"/>
+        <toc-element topic="Utilizing-SQLite-API.md"/>
+        <toc-element topic="CRUD-Operations.md"/>
+        <toc-element topic="Custom-Data-Types.md"/>
+        <toc-element topic="Migrations.md"/>
+    </toc-element>
 </instance-profile>
