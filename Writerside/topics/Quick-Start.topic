@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic SYSTEM "https://resources.jetbrains.com/writerside/1.0/xhtml-entities.dtd">
+<topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/topic.v2.xsd"
+       id="Quick-Start" title="Quick Start">
+
+    <title>
+        Quick Start
+    </title>
+    <p>Below is an example of how to register a command using the Commands API. It provides a
+        bare minimum proof-of-concept.</p>
+
+    <code-block lang="java">
+package my.plugin.commands;
+
+import com.google.inject.Inject;
+import com.mojang.brigadier.arguments.StringArgumentType;
+import io.papermc.paper.command.brigadier.Commands;
+import io.papermc.paper.command.brigadier.argument.ArgumentTypes;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import org.reprogle.bytelib.commands.CommandFactory;
+import org.reprogle.bytelib.commands.CommandRegistration;
+import org.reprogle.bytelib.commands.dsl.*;
+
+import java.util.List;
+
+public final class ExampleGuildCommandRegistration implements CommandRegistration {
+    private static final MiniMessage MM = MiniMessage.miniMessage();
+
+    private final CommandFactory factory;
+
+    @Inject
+    public ExampleGuildCommandRegistration(CommandFactory factory) {
+        this.factory = factory;
+    }
+
+    @Override
+    public void register(Commands commands) {
+        LiteralNode root = CommandDsl.literal(&quot;guild&quot;)
+                .requires(PermissionChecks.permission(&quot;bytelib.guild.use&quot;))
+                .then(CommandDsl.literal(&quot;invite&quot;)
+                        .requires(PermissionChecks.playerOnly())
+                        .then(CommandDsl.argument(&quot;player&quot;, ArgumentTypes.player())
+                                .executes(GuildInviteCallback.class, factory)))
+                .then(CommandDsl.literal(&quot;setrank&quot;)
+                        .requires(PermissionChecks.allOf(
+                                PermissionChecks.playerOnly(),
+                                PermissionChecks.permission(&quot;bytelib.guild.admin&quot;)
+                        ))
+                        .then(CommandDsl.argument(&quot;rank&quot;, StringArgumentType.word())
+                                .suggests(Suggest.fixedWithTooltip(List.of(
+                                        Suggest.suggestion(&quot;member&quot;, MM.deserialize(&quot;&lt;gray&gt;Default guild member&lt;/gray&gt;&quot;)),
+                                        Suggest.suggestion(&quot;officer&quot;, MM.deserialize(&quot;&lt;yellow&gt;Can manage invites&lt;/yellow&gt;&quot;)),
+                                        Suggest.suggestion(&quot;leader&quot;, MM.deserialize(&quot;&lt;red&gt;Full guild control&lt;/red&gt;&quot;))
+                                )))
+                                .executes(ctx -&gt; 1)));
+
+        commands.register(root.toCommandNode());
+    }
+}
+</code-block>
+
+</topic>

@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic SYSTEM "https://resources.jetbrains.com/writerside/1.0/xhtml-entities.dtd">
+<topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/topic.v2.xsd"
+       id="Welcome-to-ByteLib" title="Welcome to ByteLib">
+
+    <title>
+        Welcome to ByteLib
+    </title>
+    <note>
+        <p>This wiki is a work in progress! If you have questions or find issues, please report them by
+            opening an issue on
+            GitHub.</p>
+    </note>
+    <p>ByteLib is a shared library I originally wrote for centralizing boilerplate into a single location. However, it's
+        grown
+        into a full-fledged framework for building modern, maintainable
+        <emphasis>Paper-native</emphasis>
+        plugins.
+    </p>
+    <p>ByteLib is
+        <emphasis>explicitly</emphasis>
+        designed with the experimental Paper Plugin API in mind and comes with the following
+        features:
+    </p>
+    <list>
+        <li><p>Paper-native plugin loading, using Paper's <a
+                href="https://docs.papermc.io/paper/dev/getting-started/paper-plugins/"><code>PluginBoostrap</code> and
+            <code>PluginLoader</code> APIs</a></p></li>
+        <li><p>Guice-based dependency injection</p></li>
+        <li><p>Modular lifecycle hooks (enables multiple <code>onLoad</code>, <code>onEnable</code>, and
+            <code>onDisable</code> methods)</p></li>
+        <li><p>Config &amp; translation abstractions around <a href="https://github.com/dejvokep/boosted-yaml">BoostedYAML</a>
+        </p></li>
+        <li><p>A powerful, opinionated SQLite API with support for migrations, strong typings, and more.</p></li>
+        <li><p>A wrapper around Brigadier to simplify command authoring.</p></li>
+    </list>
+    <p>To reiterate, ByteLib is
+        <control>not a plugin</control>
+        , but rather a foundation that removes boilerplate and enforces safe
+        architecture across all plugins that use it. ByteLib currently powers
+        <a href="https://github.com/TerrorByteTW/DimensionPause">DimensionPause</a> and
+        <a href="https://github.com/TerrorByteTW/Honeypot">Honeypot</a>!
+    </p>
+    <chapter title="Why ByteLib?" id="why-bytelib">
+        <p>If you want:</p>
+        <list>
+            <li><p>A paper-native plugin</p></li>
+            <li><p>First-class support for Dependency Injection</p></li>
+            <li><p>Clean, modular code</p></li>
+            <li><p>Less boilerplate</p></li>
+        </list>
+        <p>Then ByteLib might be for you!</p>
+        <p><a href="https://papermc.io/">Paper</a> is
+            <emphasis>by far</emphasis>
+            the most used Minecraft server software, but as far as I know, there are no
+            frameworks in existence
+            that target Paper specifically. So,
+            when <a href="https://forums.papermc.io/threads/the-future-of-paper-hard-fork.1451/">Paper forked from
+                Spigot in December 2024</a>,
+            it made sense to create a framework that was designed to be Paper-native as well.
+        </p>
+        <p>As plugins get larger and more complex, it's important to ensure that they are maintainable and scalable.
+            Unfortunately,
+            most developers do not do this, and many plugins (including my own) become
+            a <a href="https://en.wikipedia.org/wiki/Spaghettification">spaghettified</a> mess.</p>
+        <p>ByteLib provides a robust foundation for building plugins that can handle these challenges. The biggest
+            benefit of
+            ByteLib is its forced use of Google's Guice library, an amazing dependency injection framework. This allows
+            developers
+            to <a href="https://en.wikipedia.org/wiki/Inversion_of_control">turn over control</a> of their plugin's
+            dependencies to the framework rather than handle it themselves, which greatly improves modularity,
+            flexibility, and
+            maintainability.</p>
+        <p>ByteLib was designed to ensure DI is available
+            <control>everywhere</control>
+            , even in your plugin's main class! As well,
+            ByteLib includes powerful APIs for handling the most common tasks plugin developers face, like persistent
+            storage, configuration, i18n, command authoring, and more. All of this means that no matter how complex your
+            plugin
+            is, you can maintain a clean, scalable codebase from <code>onLoad()</code> to <code>onDisable()</code> 😁
+        </p>
+    </chapter>
+    <chapter title="What's next?" id="what-s-next">
+        <p>To get started with ByteLib, check out the <a href="Getting-Started.topic">Getting Started guide</a>!</p>
+    </chapter>
+
+</topic>

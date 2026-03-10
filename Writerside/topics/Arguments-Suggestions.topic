@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic SYSTEM "https://resources.jetbrains.com/writerside/1.0/xhtml-entities.dtd">
+<topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/topic.v2.xsd"
+       id="Arguments-Suggestions" title="Arguments &amp;amp; Suggestions">
+
+    <title>
+        Arguments &amp; Suggestions
+    </title>
+    <p>Commands can be made extremely flexible via arguments. Brigadier (And by proxy, the Commands API) uses the
+        concept of
+        a &quot;Command tree,&quot; where each &quot;branch&quot; is its own &quot;command&quot;. In a sense, arguments
+        are just nested commands.</p>
+    <p>To create an argument, chain your <code>LiteralNode</code> with <code>.then()</code> to create a new branch in
+        the Command Tree, and then call
+        <code>CommandDsl.argument()</code> inside it. The first argument is the argument name, and the second is the
+        <code>ArgumentType</code>.</p>
+    <code-block lang="java" noinject="true">
+// Snippet
+LiteralNode root = CommandDsl.literal("money")
+                .requires(PermissionChecks.permission("money.balance.self"))
+                .executes(ctx -&gt; {
+                    ctx.getSource().getSender().sendPlainMessage("You have $xxx!"); // Do whatever you need to return the balance
+                })
+                .then(CommandDsl.argument("player", ArgumentTypes.player())
+                    .requires(PermissionChecks.permission("money.balance.other"))
+                    .executes(ctx -&gt; {
+                        final PlayerSelectorArgumentResolver targetResolver = ctx.getArgument("player", PlayerSelectorArgumentResolver.class);
+                        final Player target = targetResolver.resolve(ctx.getSource()).getFirst();
+                        ctx.getSource().getSender().sendPlainMessage("Player " + target.getName() + " has $xxx!");
+                    })
+                );
+
+</code-block>
+    <p>You may also chain <code>.then()</code> with for loops. This generates branches like:</p>
+    <list>
+        <li><p><code>/module chat &lt;state&gt;</code></p></li>
+        <li><p><code>/module guilds &lt;state&gt;</code></p></li>
+        <li><p><code>/module economy &lt;state&gt;</code></p></li>
+    </list>
+    <code-block lang="java" noinject="true">
+LiteralNode root = CommandDsl.literal("module");
+
+List&lt;String&gt; modules = List.of("chat", "guilds", "economy");
+
+for (String module : modules) {
+    root.then(CommandDsl.literal(module)
+            .then(CommandDsl.argument("state", StringArgumentType.word())
+            .executes(ctx -&gt; {
+                String state = ctx.getArgument("state", String.class);
+                return 1;
+            })
+        )
+    );
+}
+</code-block>
+    <note>
+        <p><code>.then()</code> normally takes <code>CommandDsl.argument()</code>, but can also take <code>CommandDsl.literal()</code>.
+            It's important to
+            understand the drawbacks of using <code>.literal()</code> in a <code>.then()</code> of a Command
+            Tree. <a href="https://docs.papermc.io/paper/dev/command-api/basics/arguments-and-literals/">See the Paper
+                docs for more info</a>.</p>
+    </note>
+    <p><code>.then()</code> takes either a <code>LiteralNode</code> or an <code>ArgumentNode</code>, both of which are
+        created by using <code>CommandDsl</code>. If you
+        inspect them carefully, the inside of <code>.then()</code> looks exactly like a regular Brigadier command, and
+        that's because it is!</p>
+    <p>When a player runs &quot;/money&quot; in-game and then presses the space bar to go to the next argument, the game
+        will allow them
+        to enter a Player. You'll notice that the argument's value is stored in the <code>CommandContext&lt;CommandSourceStack&gt;</code>.
+        Argument resolution and types are beyond the scope of this guide, <a
+                href="https://docs.papermc.io/paper/dev/command-api/arguments/minecraft/">see Paper's documentation on
+            Arguments and
+            <code>ArgumentType</code>s</a> for more information.</p>
+    <chapter title="Argument suggestions" id="argument-suggestions">
+        <p>You can suggest values for arguments to the player by using <code>suggests()</code>. These can be done
+            explicitly or dynamically /
+            programmatically.</p>
+        <p>The most basic way to suggest values for an argument is to use <code>Suggest.fixed()</code></p>
+        <code-block lang="java" noinject="true">
+.suggests(Suggest.fixed("member", "officer", "leader"))
+</code-block>
+        <p>If you want to add tooltips to the suggestions (Text that displays when the player's mouse hovers over a
+            suggested
+            value), you can use <code>Suggest.fixedWithTooltip()</code></p>
+        <code-block lang="java" noinject="true">
+// Assuming `MM` is MiniMessage
+.suggests(Suggest.fixedWithTooltip(List.of(
+    Suggest.suggestion("member", MM.deserialize("&lt;gray&gt;Default guild member&lt;/gray&gt;")),
+    Suggest.suggestion("officer", MM.deserialize("&lt;yellow&gt;Can manage invites&lt;/yellow&gt;"))
+)))
+</code-block>
+        <p>Suggestions may also be made dynamically using <code>Suggest.dynamic()</code>. Use
+            <code>Suggest.suggestion()</code> to actually create the
+            suggestion.</p>
+        <code-block lang="java" noinject="true">
+.suggests(Suggest.dynamic((ctx, remaining) -&gt;
+    rankService.getRanks().stream()
+        .filter(rank -&gt; rank.startsWith(remaining))
+        .map(Suggest::suggestion)
+        .toList()
+))
+</code-block>
+        <code-block lang="java" noinject="true">
+.suggests(Suggest.dynamic((ctx, remaining) -&gt;
+    rankService.getRanks().stream()
+        .filter(rank -&gt; rank.startsWith(remaining))
+        .map(rank -&gt; Suggest.suggestion(
+            rank,
+            MM.deserialize("&lt;gray&gt;Rank:&lt;/gray&gt; &lt;yellow&gt;" + rank + "&lt;/yellow&gt;")
+        ))
+        .toList()
+))
+</code-block>
+    </chapter>
+
+</topic>

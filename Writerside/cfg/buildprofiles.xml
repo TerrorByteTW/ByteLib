@@ -5,6 +5,9 @@
 
     <variables>
         <content-max-width>1450</content-max-width>
+        <download-title>Get ByteLib</download-title>
+        <download-page>https://github.com/TerrorByteTW/ByteLib/releases</download-page>
+        <showDownloadButton>true</showDownloadButton>
     </variables>
     <build-profile instance="bd">
         <variables>

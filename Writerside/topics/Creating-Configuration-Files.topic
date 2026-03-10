@@ -1,0 +1,290 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic SYSTEM "https://resources.jetbrains.com/writerside/1.0/xhtml-entities.dtd">
+<topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/topic.v2.xsd"
+       id="Creating-Configuration-Files"
+       title="Setting up Config API">
+
+    <title>Setting up Config API</title>
+
+    <secondary-label ref="wip"/>
+
+    <p>
+        The Config API is extremely opinionated. Developers are free to do whatever they want with
+        their configuration files,
+        <emphasis>but</emphasis>
+        two files are required for the API to
+        function.
+    </p>
+
+    <list type="bullet">
+        <li>
+            <p><code>config.yml</code> – the primary configuration file for your plugin.</p>
+        </li>
+        <li>
+            <p>
+                <code>lang/en_US.yml</code> – the default language file for your plugin.
+                ByteLib supports any number of language files, but <code>en_US</code> is mandatory.
+            </p>
+        </li>
+    </list>
+
+    <p>
+        In addition to creating these files, several properties must exist in the configuration
+        and language files.
+    </p>
+
+    <deflist>
+        <def title="file-version">
+            <p>
+                A number representing the version of the default configuration.
+                This value is used to automatically update configs on the server.
+            </p>
+        </def>
+
+        <def title="language">
+            <p>
+                Determines which language file the Config API uses for translations.
+                This should default to <code>en_US</code>.
+            </p>
+        </def>
+
+        <def title="bypass-language-check">
+            <p>
+                A boolean controlling whether ByteLib validates that the selected language is
+                officially supported.
+            </p>
+            <p>
+                This allows server administrators to provide their own language files.
+                The default value should always be <code>false</code>.
+            </p>
+        </def>
+
+        <def title="language-version">
+            <p>
+                A number representing the version of the language file.
+                This allows ByteLib to automatically update translation files.
+            </p>
+        </def>
+    </deflist>
+
+    <chapter title="Setting up the files in your project" id="setting-up-the-files-in-your-project">
+
+        <list type="decimal">
+            <li>
+                <p>
+                    In your <code>src/main/resources</code> folder, create a
+                    <code>config.yml</code> file and a folder called <code>lang</code>.
+                </p>
+            </li>
+
+            <li>
+                <p>
+                    Inside the <code>lang</code> folder, create the file
+                    <code>en_US.yml</code>.
+                </p>
+            </li>
+
+            <li>
+                <p>
+                    Add the required properties to <code>config.yml</code>.
+                </p>
+            </li>
+
+            <li>
+                <p>
+                    Add the required property to <code>lang/en_US.yml</code>.
+                </p>
+            </li>
+        </list>
+
+        <p>Your files should resemble the following structure.</p>
+
+        <code-block lang="yaml">
+# config.yml
+file-version: 1
+language: en_US
+bypass-language-check: false
+
+# lang/en_US.yml
+language-version: 1
+        </code-block>
+
+        <p>
+            To add additional translations, create another <code>.yml</code> file in the
+            <code>resources/lang</code> folder. ByteLib automatically discovers language
+            files, so no additional configuration is required.
+        </p>
+
+        <tip>
+            <p>
+                If the translation file exists in the language folder, ByteLib automatically
+                considers it a supported language.
+            </p>
+        </tip>
+
+        <chapter title="Allowing custom translations" id="allowing-custom-translations">
+
+            <p>
+                ByteLib allows server administrators to create their own translation files in
+                order to crowdsource translations or customize chat messages.
+            </p>
+
+            <warning>
+                <p>
+                    Custom language files require <code>bypass-language-check</code> to be set
+                    to <code>true</code>. When enabled, protections against unsupported
+                    languages are removed.
+                </p>
+            </warning>
+
+            <p>
+                After enabling this option, upload a <code>.yml</code> file named after the
+                desired locale to the server directory:
+            </p>
+
+            <code-block lang="text">
+plugins/[plugin]/lang/
+            </code-block>
+
+            <p>
+                Then update the <code>language</code> property in <code>config.yml</code> to
+                match the filename (without the extension). The translation will load
+                automatically.
+            </p>
+
+        </chapter>
+
+        <chapter title="Upgrading your config" id="upgrading-your-config">
+
+            <p>
+                As your plugin evolves, you may need to modify or add new configuration
+                values.
+            </p>
+
+            <list type="decimal">
+                <li>
+                    <p>Add new properties, comments, or defaults to the configuration file.</p>
+                </li>
+                <li>
+                    <p>
+                        Increment the <code>file-version</code> value. Increasing it by
+                        <code>1</code> is the recommended approach.
+                    </p>
+                </li>
+            </list>
+
+            <tip>
+                <p>
+                    Consider adding a comment explaining the version number so server
+                    administrators do not change it manually. Doing so could result in
+                    unintended consequences.
+                </p>
+            </tip>
+
+        </chapter>
+
+    </chapter>
+
+    <chapter title="Using config" id="using-config">
+
+        <p>
+            To access configuration or language files, inject
+            <code>BytePluginConfig</code> into your class.
+        </p>
+
+        <p>
+            The <code>BytePluginConfig</code> interface provides two primary methods:
+        </p>
+
+        <deflist>
+            <def title="config()" id="config">
+                <p>Returns the default configuration file.</p>
+            </def>
+
+            <def title="lang()" id="lang">
+                <p>Returns the currently active language file.</p>
+            </def>
+        </deflist>
+
+        <p>
+            Both methods return a BoostedYAML <code>YamlDocument</code>. Refer to
+            BoostedYAML documentation for working with YAML values and properties.
+        </p>
+
+        <p>
+            If you need to access a
+            <a href="Adding-Custom-Configurations.topic">custom configuration file</a>,
+            use either <code>yaml(String name)</code> or <code>require(String name)</code>.
+        </p>
+
+        <deflist>
+            <def title="yaml(String name)" id="yaml-string-name">
+                <p>
+                    Returns the <code>YamlDocument</code> if it exists, otherwise
+                    <code>null</code>.
+                </p>
+            </def>
+
+            <def title="require(String name)" id="require-string-name">
+                <p>
+                    Returns the document but throws an exception if the configuration
+                    is not loaded.
+                </p>
+            </def>
+        </deflist>
+
+        <p>
+            Use <code>yaml()</code> when the configuration file is optional and
+            <code>require()</code> when the configuration is required for plugin
+            functionality.
+        </p>
+
+        <p>
+            A utility method, <code>locale()</code>, returns the name of the active
+            locale such as <code>en_US</code>.
+        </p>
+
+        <note>
+            <p>
+                The default configuration file is registered under the name
+                <code>config</code>, and the default language file is registered as
+                <code>lang</code>.
+            </p>
+
+            <p>
+                The <code>config()</code> and <code>lang()</code> methods are simply
+                convenience wrappers for <code>yaml("config")</code> and
+                <code>yaml("lang")</code>.
+            </p>
+
+            <p>
+                For more details about configuration registration, see the
+                <a href="Adding-Custom-Configurations.topic">Custom Config Files</a>
+                documentation.
+            </p>
+        </note>
+
+    </chapter>
+
+    <chapter title="Reloading config files" id="reloading-config-files">
+
+        <p>
+            To reload a specific configuration file, call
+            <code>reload(String name)</code>, where <code>name</code> is the
+            configuration key.
+        </p>
+
+        <p>
+            To reload all configuration files, call <code>reload()</code>. This reloads:
+        </p>
+
+        <list type="bullet">
+            <li>the default configuration</li>
+            <li>the active translation file</li>
+            <li>all registered custom configuration files</li>
+        </list>
+
+    </chapter>
+
+</topic>

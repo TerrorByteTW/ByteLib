@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic SYSTEM "https://resources.jetbrains.com/writerside/1.0/xhtml-entities.dtd">
+<topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/topic.v2.xsd"
+       id="Custom-Data-Types" title="Custom Data Types">
+
+    <title>
+        Custom Data Types
+    </title>
+    <p>If you want to create a custom type, create a variable typed as <code>SqlType&lt;T&gt;</code>, where
+        <code>T</code> is your custom data
+        type, then set it to a new <code>SqlType&lt;&gt;()</code> and implement the <code>bind</code> and
+        <code>read</code> functions.</p>
+    <p>Here is how DimensionPause implements the <code>SqlType</code> for <code>Instant</code>, while supporting
+        nullability as well</p>
+    <code-block lang="java">
+public static final SqlType&lt;Instant&gt; INSTANT = new SqlType&lt;&gt;() {
+    public void bind(PreparedStatement ps, int index, Instant value) throws SQLException {
+        if (value != null) ps.setLong(4, value.toEpochMilli());
+        else ps.setNull(4, Types.BIGINT);
+    }
+
+    public @Nullable Instant read(ResultSet rs, String column) throws SQLException {
+        Object raw = rs.getObject(column);
+        Long expiresAtMs = (raw instanceof Number n) ? n.longValue() : null;
+        return expiresAtMs != null ? Instant.ofEpochMilli(expiresAtMs) : null;
+    }
+};
+</code-block>
+    <p>Since SQLite has no idea what an <code>Instant</code> is, we use <code>BIGINT</code> as the backing data type.
+        Think of <code>bind()</code> as a
+        serializer and <code>read()</code> as a deserializer: <code>bind()</code> writes a <code>long</code> to the DB,
+        and <code>read()</code> converts it back to an
+        <code>Instant</code>, or returns null if the column is null.</p>
+
+</topic>

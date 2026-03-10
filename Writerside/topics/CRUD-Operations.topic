@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic SYSTEM "https://resources.jetbrains.com/writerside/1.0/xhtml-entities.dtd">
+<topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/topic.v2.xsd"
+       id="CRUD-Operations" title="CRUD Operations">
+
+    <title>
+        CRUD Operations
+    </title>
+    <p>The SQLite API provides a set of basic CRUD operators that you can use to query data without writing raw SQL.</p>
+    <p>This is where tables really shine! Let's insert a single record into the DB. First, let's bring back our <code>WORLDS</code>
+        table
+        we created in a previous topic:</p>
+
+    <code-block lang="java">
+public final class Tables {
+    public static final Table WORLDS = Table.of(&quot;worlds&quot;);
+    public static final Table.Column&lt;String&gt; world = WORLDS.col(&quot;world&quot;, SqlType.TEXT);
+    public static final Table.Column&lt;World.Environment&gt; dimension = WORLDS.col(&quot;dimension&quot;, PaperSqlTypes.ENV);
+    public static final Table.Column&lt;Boolean&gt; enabled = WORLDS.col(&quot;enabled&quot;, SqlType.BOOLEAN);
+    public static final Table.Column&lt;String&gt; updatedAt = WORLDS.col(&quot;updatedAt&quot;, SqlType.TEXT);
+    public static final Table.Column&lt;Instant&gt; expiresAt = WORLDS.col(&quot;expiresAt&quot;, PaperSqlTypes.INSTANT);
+
+    private Tables() {
+    }
+}
+</code-block>
+    <code-block lang="java" noinject="true">
+db.insert(
+        WORLDS,
+        Map.of(
+                WORLD, &quot;world&quot;,
+        DIMENSION, World.Environment.NORMAL,
+        ENABLED, true,
+        EXPIRES_AT, null // This would actually fail because Map.of() doesn't allow null values, but it's here just for example
+)
+);
+</code-block>
+    <p>Because we already defined the concrete types for the <code>WORLDS</code> table, <code>SqliteDatabase</code> can
+        take the <code>Map</code> we provided,
+        convert each of those values to their SQLite-compatible types, and write to the correct table. It's that easy!
+    </p>
+    <note>
+        <p>Note the omission of the <code>updatedAt</code> column. Because this is a custom type we
+            defined, it has built-in handling for
+            null values. Therefore, if we want to pass null, we can just omit it. Check the <a
+                    href="Custom-Data-Types.topic">Custom Data Types</a>
+            documentation to learn how to define your own types</p>
+    </note>
+    <p>Let's say you want to query, it's just as easy:</p>
+
+    <code-block lang="java">
+List&lt;WorldPauseStatus&gt; statuses = db.query(
+        WORLDS,
+        row -&gt; new WorldPauseStatus(
+                row.bool(&quot;enabled&quot;),
+                row.get(&quot;expiresAt&quot;, PaperSqlTypes.INSTANT)
+        )
+);
+</code-block>
+    <p>The <code>query()</code> method takes a <code>Table</code> and a <code>RowMapper</code>. The Table is provided so
+        it knows which table to query when
+        calling <code>SELECT * FROM</code>, and the RowMapper is used to convert the results to objects.</p>
+    <p>Need to filter your query? Use <code>selectWhere</code></p>
+
+    <code-block lang="java">
+List&lt;WorldPauseStatus&gt; statuses = db.selectWhere(
+        WORLDS,
+        &quot;world = ?&quot;,
+        row -&gt; new WorldPauseStatus(
+                row.bool(&quot;enabled&quot;),
+                row.get(&quot;expiresAt&quot;, PaperSqlTypes.INSTANT)
+        ),
+        Param.text(&quot;world&quot;)
+);
+</code-block>
+    <p><code>selectWhere()</code> takes four or more arguments. The first and third arguments are the same as <code>query()</code>,
+        just representing
+        your
+        <code>Table</code> and <code>RowMapper</code>. However, the second argument is a raw SQL representation of a
+        <code>WHERE</code> clause. The fourth and
+        following arguments are <code>Param</code> objects representing the values that will be inserted into the <code>WHERE</code>
+        clause.</p>
+    <tip>
+        <p>Do not add <code>WHERE</code> in the filter string, <code>selectWhere()</code> does that automatically</p>
+    </tip>
+    <p>The API handles type conversion automatically, while still requiring you to write some manual SQL. It's not meant
+        to be
+        an ORM, but it is made to simplify your life a little bit</p>
+
+</topic>

@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic SYSTEM "https://resources.jetbrains.com/writerside/1.0/xhtml-entities.dtd">
+<topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/topic.v2.xsd"
+       id="Handling-Translations"
+       title="Handling Translations">
+
+    <title>Handling Translations</title>
+    <secondary-label ref="wip"/>
+
+    <p>
+        Normally, plugin developers must handle message formatting themselves. While ByteLib
+        automatically
+        <emphasis>loads</emphasis>
+        language files, formatting messages typically
+        requires additional work.
+    </p>
+
+    <p>
+        As well, the underlying BoostedYAML library only returns primitives, and many Paper methods that
+        previously accepted these are now deprecated (for example,
+        <code>Player#sendMessage(String message)</code>).
+    </p>
+
+    <p>
+        ByteLib provides a MiniMessage-based <code>Translator</code> utility to simplify working
+        with translations and formatted text. This utility automatically handles pulling text from your language file
+        and running it through a MiniMessage deserializer.
+    </p>
+
+    <chapter title="Getting started" id="getting-started">
+
+        <p>
+            Inject <code>Translator</code> into any class that needs to send translated or
+            formatted messages.
+        </p>
+
+        <code-block lang="java">
+public class SomeClass {
+    private final Translator translator;
+
+    @Inject
+    public SomeClass(Translator translator) {
+        this.translator = translator;
+    }
+}
+        </code-block>
+
+        <p>
+            The <code>Translator</code> utility contains two primary methods:
+            <code>tr()</code> and <code>title()</code>.
+        </p>
+
+    </chapter>
+
+    <chapter id="tr">
+        <title><code>tr()</code></title>
+
+        <code-block lang="java">
+public Component tr(String key, TagResolver... resolvers);
+        </code-block>
+
+        <p>
+            The <code>tr()</code> method retrieves a translation from the active language file
+            and automatically processes MiniMessage formatting tags.
+        </p>
+
+        <p>
+            The first parameter is the translation key from the language file. Optional
+            <code>TagResolver</code> parameters can be supplied to dynamically replace MiniMessage
+            tags.
+        </p>
+
+        <p>
+            <code>TagResolver</code> is part of the Adventure API. Refer to the Adventure
+            documentation for details about creating and using resolvers.
+        </p>
+
+        <p>
+            The returned value is a fully formatted Adventure
+            <code>Component</code>.
+        </p>
+
+    </chapter>
+
+    <chapter id="title">
+        <title><code>title()</code></title>
+
+        <code-block lang="java">
+public Title title(String keyBase, Title.Times times, TagResolver... resolvers);
+        </code-block>
+
+        <p>
+            The <code>title()</code> method is a convenience utility that constructs Adventure
+            <code>Title</code> objects using values from the language file. This removes a small amount of boilerplate
+            when creating titles in your plugin.
+        </p>
+
+        <p>
+            Title entries must follow the following structure in your language file:
+        </p>
+
+        <code-block lang="yaml">
+# lang/[langFile].yml
+titleKey:
+    title: Title value
+    subtitle: Subtitle value
+        </code-block>
+
+        <p>
+            In the example above, <code>titleKey</code> would be passed as the
+            <code>keyBase</code> parameter.
+        </p>
+
+        <p>
+            The <code>Title.Times</code> parameter controls the fade-in, stay, and fade-out
+            durations when displaying the title.
+        </p>
+
+        <p>
+            Like <code>tr()</code>, this method also supports optional
+            <code>TagResolver</code> parameters.
+        </p>
+
+    </chapter>
+
+    <chapter title="Special Translation Keys" id="special-translation-keys">
+
+        <p>
+            Many plugins include a message prefix to identify messages from the plugin
+            and provide a consistent in-game style.
+        </p>
+
+        <p>
+            ByteLib includes a built-in MiniMessage <code>TagResolver</code> that replaces
+            <code>&lt;prefix&gt;</code> tags with the value of the <code>prefix</code>
+            entry from the language file.
+        </p>
+
+        <p>
+            If the <code>prefix</code> key does not exist, the tag will resolve to an
+            empty string.
+        </p>
+
+        <tip><p>This <code>TagResolver</code> will always be executed, so it is recommended <b>not</b> to use
+            <code>prefix</code> as a translation key.</p></tip>
+
+        <code-block lang="yaml" collapsible="true" collapsed-title="Prefix example">
+language-version: 1
+prefix: &lt;blue&gt;[My Prefix]&lt;/blue&gt;
+
+some-message: &lt;prefix&gt; This is a message!
+some-other-message: &lt;prefix&gt; This will be prefixed, too!
+        </code-block>
+
+    </chapter>
+
+</topic>

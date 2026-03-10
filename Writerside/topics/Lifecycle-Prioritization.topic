@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic SYSTEM "https://resources.jetbrains.com/writerside/1.0/xhtml-entities.dtd">
+<topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/topic.v2.xsd"
+       id="Lifecycle-Prioritization" title="Lifecycle Prioritization">
+
+    <title>
+        Lifecycle Prioritization
+    </title>
+    <p>If you want to call your lifecycle classes in a particular order, you may set the priority by annotating your
+        Lifecycle
+        class with <code>@LifecyclePriority(PluginLifecycle.Priority)</code>. Priorities are <code>LOWEST</code>, <code>LOW</code>,
+        <code>NORMAL</code>, <code>HIGH</code>,
+        and <code>HIGHEST</code>.</p>
+    <p>All lifecycle methods (<code>onLoad</code>, <code>onEnable</code>, and <code>onDisable</code>) are gathered and
+        sorted at runtime and
+        called in order of the highest priority first. Lifecycles with the same priority are not guaranteed to run in
+        any
+        particular order. All lifecycles are the default <code>NORMAL</code> priority unless specified, and will
+        therefore be run in
+        random order.</p>
+
+    <code-block lang="java">
+
+@LifecyclePriority(PluginLifecycle.Priority.HIGHEST)
+public final class MyLifecycle implements PluginLifecycle {
+    @Override
+    public void onEnable() {
+        // ...
+    }
+}
+</code-block>
+
+</topic>

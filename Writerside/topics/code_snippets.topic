@@ -71,7 +71,7 @@
             }
         </code-block>
     </snippet>
-    <snippet id="bytelib-wiring">
+    <snippet id="bytelib-wiring-method-1">
         <code-block lang="java">
             // Create a class named `[MainClass]Wiring.class` and implement PluginWiring
             // Ensure it returns your Module you made in step 3
@@ -83,10 +83,10 @@
                     );
                 }
             }
-
-            //
-            // OR
-            //
+        </code-block>
+    </snippet>
+    <snippet id="bytelib-wiring-method-2">
+        <code-block lang="java">
             // Nest a `Wiring` class in your plugin's main class
             public final class DimensionPausePlugin extends ByteLibPlugin {
 
@@ -105,10 +105,10 @@
                     }
                 }
             }
-
-            //
-            // OR
-            //
+        </code-block>
+    </snippet>
+    <snippet id="bytelib-wiring-method-3">
+        <code-block lang="java">
             // Create a class that implements PluginWiring, and allow the `ServiceLoader` to attempt to locate it (Not recommended)
             public static class PluginWiringSetup extends PluginWiring {
                 @Override

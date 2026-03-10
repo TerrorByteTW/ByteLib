@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic SYSTEM "https://resources.jetbrains.com/writerside/1.0/xhtml-entities.dtd">
+<topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/topic.v2.xsd"
+       id="Create-a-Command" title="Create a Command">
+
+    <title>
+        Create a Command
+    </title>
+    <p>The Commands API uses ByteLib's own <code>PluginLifecycle</code> API surface internally. It creates a lifecycle
+        class called
+        <code>CommandsLifecycle</code> which registers each command during <code>onEnable()</code>.</p>
+    <p>For the Commands API to find and register your Command, you must implement the <code>CommandRegistration</code>
+        interface from
+        ByteLib. Implementing that class requires you to override the <code>register(Commands commands)</code> method,
+        which serves as your
+        Command's registration entry point.</p>
+    <p>Use the <code>CommandDsl</code> class to create a command. <code>CommandDsl</code> is the main class used to
+        create Commands API
+        commands.</p>
+
+    <code-block lang="java">
+public final class MyCommandRegistration implements CommandRegistration {
+    @Override
+    public void register(Commands commands) {
+        LiteralNode root = CommandDsl.literal(&quot;myCommand&quot;);
+        commands.register(root.toCommandNode());
+    }
+}
+</code-block>
+    <p><code>toCommandNode()</code> is used to convert the <code>LiteralNode</code> that ByteLib provides to a
+        <code>LiteralCommandNode&lt;CommandSourceStack&gt;</code> required by Paper.</p>
+    <chapter title="Using Dependency Injection" id="using-dependency-injection">
+        <p>You can use Dependency Injection in <code>CommandRegistration</code> classes. To inject dependencies into
+            your command, you may
+            create a constructor and annotate it with <code>@Inject</code> like normal</p>
+
+        <code-block lang="java">
+// ...
+public final class MyCommandRegistration implements CommandRegistration {
+    private final MyService myService;
+    private final CommandFactory factory;
+
+    @Inject
+    public MyCommandRegistration(MyService myService, CommandFactory factory) {
+        this.myService = myService;
+        this.factory = factory;
+    }
+
+    @Override
+    public void register(Commands commands) {
+        LiteralNode root = CommandDsl.literal(&quot;myCommand&quot;);
+        commands.register(root.toCommandNode());
+    }
+}
+</code-block>
+        <p><code>CommandFactory</code> is a special dependency provided by the Commands API that can be used to create
+            complex command
+            executors. You will read about it a later topic.</p>
+    </chapter>
+
+</topic>

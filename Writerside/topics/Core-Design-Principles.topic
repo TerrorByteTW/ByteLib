@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic SYSTEM "https://resources.jetbrains.com/writerside/1.0/xhtml-entities.dtd">
+<topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/topic.v2.xsd"
+       id="Core-Design-Principles" title="Core Design Principles">
+
+    <title>
+        Core Design Principles
+    </title>
+    <chapter title="1. Paper-native first" id="1-paper-native-first">
+        <p>ByteLib uses Paper's modern plugin system, utilizing:</p>
+        <list>
+            <li><p><code>paper-plugin.yml</code></p></li>
+            <li><p><code>PluginBootstrap</code></p></li>
+            <li><p><code>PluginLoader</code></p></li>
+        </list>
+        <p>Legacy Bukkit patterns have been avoided unless strictly necessary</p>
+    </chapter>
+    <chapter title="2. Two Injectors (Critical Concept)" id="2-two-injectors-critical-concept">
+        <p>ByteLib intentionally splits dependency injection into two Guice injectors:</p>
+        <table>
+            <tr>
+                <td>Injector</td>
+                <td>Purpose</td>
+            </tr>
+            <tr>
+                <td>
+                    <control>Bootstrap Injector</control>
+                </td>
+                <td>Exists
+                    <emphasis>before</emphasis>
+                    the plugin instance
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <control>Plugin (Child) Injector</control>
+                </td>
+                <td>Exists
+                    <emphasis>after</emphasis>
+                    the plugin instance
+                </td>
+            </tr>
+        </table>
+        <p>This avoids Guice accidentally constructing a second plugin instance, which can cause everything from subtle
+            bugs to the
+            plugin flat-out refusing to enable</p>
+        <chapter title="Bootstrap Injector (DO NOT TOUCH THE PLUGIN)" id="bootstrap-injector-do-not-touch-the-plugin">
+            <p>Used only for:</p>
+            <list>
+                <li><p><code>PluginMeta</code></p></li>
+                <li><p><code>ComponentLogger</code></p></li>
+                <li><p>Plugin Path (data folder)</p></li>
+                <li><p>Wiring resolution</p></li>
+                <li>
+                    <p>
+                        <emphasis>Pure</emphasis>
+                        services that do not depend on <code>Plugin</code></p>
+                </li>
+            </list>
+            <p>Never bind or inject:</p>
+            <list>
+                <li><p><code>Plugin</code></p></li>
+                <li><p><code>JavaPlugin</code></p></li>
+                <li><p>Your concrete plugin class</p></li>
+                <li><p>Listeners</p></li>
+                <li><p>Commands</p></li>
+                <li><p>Schedulers</p></li>
+                <li><p>Databases</p></li>
+            </list>
+        </chapter>
+        <chapter title="Plugin (Child) Injector" id="plugin-child-injector">
+            <p>Created after Paper constructs the plugin instance.</p>
+            <p>This injector:</p>
+            <list>
+                <li><p>Binds the real Paper-managed plugin instance</p></li>
+                <li><p>Installs plugin-specific modules</p></li>
+                <li><p>Runs lifecycle hooks</p></li>
+                <li><p>Registers commands &amp; listeners</p></li>
+                <li><p>Owns SQLite, config, timers, etc.</p></li>
+            </list>
+        </chapter>
+    </chapter>
+    <chapter title="Bootstrap Flow (Simplified)" id="bootstrap-flow-simplified">
+
+<code-block lang="text">
+Paper loads plugin
+ └─ BytePluginBootstrap.createPlugin()
+     ├─ Create bootstrap injector (CoreModule only)
+     ├─ Construct plugin instance (Paper-managed)
+     ├─ Create child injector:
+     │    - PluginInstanceModule
+     │    - LifecycleModule
+     │    - CommandsModule
+     │    - Plugin wiring modules
+     ├─ Inject members using child injector
+     └─ Return plugin
+</code-block>
+    </chapter>
+
+</topic>

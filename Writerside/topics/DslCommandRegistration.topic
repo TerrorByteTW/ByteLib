@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic SYSTEM "https://resources.jetbrains.com/writerside/1.0/xhtml-entities.dtd">
+<topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/topic.v2.xsd"
+       id="DslCommandRegistration" title="DslCommandRegistration">
+
+    <title>
+        DslCommandRegistration
+    </title>
+    <p><code>DslCommandRegistration</code> is an
+        <control>optional adapter</control>
+        that wraps a prebuilt <code>LiteralNode</code> and exposes it as a <code>CommandRegistration</code>.
+    </p>
+    <chapter title="Why you might want it" id="why-you-might-want-it">
+        <p>Use it when you want to:</p>
+        <list>
+            <li><p>Build command trees in separate providers/builders</p></li>
+            <li><p>Reuse command roots across modules/tests</p></li>
+            <li><p>Keep registration classes thin (or avoid writing one per command)</p></li>
+            <li><p>Standardize registration of prebuilt DSL roots</p></li>
+        </list>
+    </chapter>
+    <chapter title="Why you might skip it" id="why-you-might-skip-it">
+        <p>If you prefer explicit classes like <code>ExampleGuildCommandRegistration</code> for each top-level command,
+            you don’t need this adapter.</p>
+    </chapter>
+    <chapter title="Example usage" id="example-usage">
+
+<code-block lang="java">
+public final class GuildRegistrationFactory {
+    private final CommandFactory factory;
+
+    @Inject
+    public GuildRegistrationFactory(CommandFactory factory) {
+        this.factory = factory;
+    }
+
+    public CommandRegistration create() {
+        LiteralNode root = CommandDsl.literal(&quot;guild&quot;)
+                .requires(PermissionChecks.permission(&quot;bytelib.guild.use&quot;))
+                .then(CommandDsl.literal(&quot;invite&quot;)
+                        .then(CommandDsl.argument(&quot;player&quot;, ArgumentTypes.player())
+                                .executes(GuildInviteCallback.class, factory)));
+
+        return new DslCommandRegistration(root);
+    }
+}
+</code-block>
+        <p>Then add the returned <code>CommandRegistration</code> to your DI registration set (pattern depends on your
+            module design). An example of doing this would be as follows:</p>
+
+        <code-block lang="java">
+public final class YourPluginCommandsModule extends AbstractModule {
+    @ProvidesIntoSet
+    CommandRegistration provideGuildRegistration(CommandFactory factory) {
+        LiteralNode root = CommandDsl.literal(&quot;guild&quot;)
+                .then(CommandDsl.literal(&quot;setrank&quot;)
+                        .then(CommandDsl.argument(&quot;rank&quot;, StringArgumentType.word())
+                                .executes(ctx -&gt; 1)));
+
+        return new DslCommandRegistration(root);
+    }
+}
+</code-block>
+        <p>To actually have that command be picked up by ByteLib when your plugin loads, you must add that module to
+            your Wiring class (See the &quot;Bootstrapping a Plugin&quot; page for more info):</p>
+
+        <code-block lang="java">
+@Override
+public List&lt;Module&gt; modules(PluginMeta meta, Path dataDir, ComponentLogger logger) {
+    return List.of(
+            new YourPluginModule(),
+            new YourPluginCommandsModule()
+    );
+}
+</code-block>
+    </chapter>
+
+</topic>

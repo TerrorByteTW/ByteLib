@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic SYSTEM "https://resources.jetbrains.com/writerside/1.0/xhtml-entities.dtd">
+<topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/topic.v2.xsd"
+       id="Lifecycle-API"
+       title="Lifecycles API">
+
+    <title>Lifecycles API</title>
+
+    <p>
+        The Lifecycles API allows plugins to define multiple
+        <code>onLoad()</code>, <code>onEnable()</code>, and <code>onDisable()</code>
+        handlers instead of placing all lifecycle logic in a single class.
+    </p>
+
+    <p>
+        This makes it easier to decouple plugin initialization and shutdown logic,
+        allowing different parts of your plugin to manage their own lifecycle
+        responsibilities.
+    </p>
+
+    <p>
+        While some developers split lifecycle logic into helper methods within a
+        single class, ByteLib takes this approach further by allowing lifecycle
+        behavior to be implemented in entirely separate classes.
+    </p>
+
+    <note>
+        <p>Separating lifecycles into separate lifecycle classes is not required. However, to use the Paper lifecycle
+            methods, you must have <i>at least one</i> lifecycle class.</p>
+    </note>
+
+    <chapter title="Why use lifecycle classes?" id="why-use-lifecycle-classes">
+
+        <p>
+            Splitting lifecycle logic into dedicated classes improves the structure
+            and maintainability of larger plugins.
+        </p>
+
+        <list type="bullet">
+            <li>
+                <p>Reduces large and difficult-to-maintain <code>onEnable()</code> methods.</p>
+            </li>
+            <li>
+                <p>Encourages separation of responsibilities between plugin systems.</p>
+            </li>
+            <li>
+                <p>Allows lifecycle behavior to integrate naturally with dependency injection.</p>
+            </li>
+        </list>
+
+    </chapter>
+
+</topic>

@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic SYSTEM "https://resources.jetbrains.com/writerside/1.0/xhtml-entities.dtd">
+<topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/topic.v2.xsd"
+       id="Commands-API" title="Commands API">
+
+    <title>
+        Commands API
+    </title>
+    <primary-label ref="subject-to-change"/>
+    <secondary-label ref="wip"/>
+    <p>The Commands API is a DSL for Brigadier that makes command authoring easier while still providing all the amazing
+        features Brigadier offers over the legacy <code>CommandExecutor</code> API in Spigot.</p>
+    <chapter title="Key capabilities" id="key-capabilities">
+        <list>
+            <li><p>Fluent Brigadier DSL (<code>literal</code>, <code>argument</code>, <code>then</code>,
+                <code>requires</code>, <code>executes</code>, <code>suggests</code>)</p></li>
+            <li><p>DI-backed command callbacks</p></li>
+            <li><p>Complex permission logic (<code>allOf</code>, <code>anyOf</code>, <code>not</code>)</p></li>
+            <li><p>Static and dynamic suggestions</p></li>
+            <li><p>Dynamic generation of subcommands/subarguments at registration time</p></li>
+        </list>
+    </chapter>
+    <chapter title="Brigadier vs Commands API" id="brigadier-vs-commands-api" collapsible="true">
+        <p>You may be asking yourself: &quot;Why would I use ByteLib's Commands API instead of Brigadier, when they're
+            so similar?&quot; Read
+            the blurb below to understand the benefits or skip down to the Quick Start section to just get started.</p>
+        <p>The benefit to Commands API is that it provides helpers to reduce boilerplate code that Brigadier typically
+            requires
+            and also provides first class support for Google Guice out of the box. Here's an example of two identical
+            commands, one
+            written with Brigadier and one written with the Commands API:</p>
+        <compare first-title="Brigadier" second-title="Commands API">
+<code-block lang="java">
+public final class BrigadierCommand {
+
+    public static void register(Commands commands) {
+        LiteralArgumentBuilder&lt;CommandSourceStack&gt; root =
+                LiteralArgumentBuilder.&lt;CommandSourceStack&gt;literal("rank")
+                        .requires(src -&gt; src.getSender().hasPermission("rank.use"))
+                        .then(LiteralArgumentBuilder.&lt;CommandSourceStack&gt;literal("set")
+                                .requires(src -&gt; src.getSender().hasPermission("rank.set"))
+                                .then(RequiredArgumentBuilder
+                                        .&lt;CommandSourceStack, String&gt;argument("player", StringArgumentType.word())
+                                        .then(RequiredArgumentBuilder
+                                                .&lt;CommandSourceStack, String&gt;argument("rank", StringArgumentType.word())
+                                                .suggests((ctx, builder) -&gt; {
+                                                    builder.suggest("member");
+                                                    builder.suggest("officer");
+                                                    builder.suggest("leader");
+                                                    return builder.buildFuture();
+                                                })
+                                                .executes(ctx -&gt; {
+                                                    String player = ctx.getArgument("player", String.class);
+                                                    String rank = ctx.getArgument("rank", String.class);
+
+                                                    ctx.getSource().getSender()
+                                                            .sendMessage("Set " + player + " to rank " + rank);
+                                                    return 1;
+                                                }))));
+
+        commands.register(root.build());
+    }
+}
+</code-block>
+            <code-block lang="java">
+public final class CommandsAPICommandRegistration implements CommandRegistration {
+    @Override
+    public void register(Commands commands) {
+        LiteralNode root = CommandDsl.literal("rank")
+                .requires(PermissionChecks.permission("rank.use"))
+                .then(CommandDsl.literal("set")
+                        .requires(PermissionChecks.permission("rank.set"))
+                        .then(CommandDsl.argument("player", StringArgumentType.word())
+                                .then(CommandDsl.argument("rank", StringArgumentType.word())
+                                        .suggests(Suggest.fixed("member", "officer", "leader"))
+                                        .executes(ctx -> {
+                                            String player = ctx.getArgument("player", String.class);
+                                            String rank = ctx.getArgument("rank", String.class);
+
+                                            ctx.getSource().getSender()
+                                                    .sendMessage("Set " + player + " to rank " + rank);
+                                            return 1;
+                                        }))));
+
+        commands.register(root.toCommandNode());
+    }
+}
+</code-block>
+        </compare>
+        <p>They both look similar, but the Commands API command has slightly less boilerplate. This alone isn't enough
+            to convince
+            someone to use the Commands API over Brigadier. However, once you start getting into
+            <code>CommandCallback</code>s, complicated
+            permission checks, variable arguments &amp; suggestions, and dependency hell, the Commands API makes it
+            trivially easy to
+            expand your command(s).</p>
+    </chapter>
+
+</topic>

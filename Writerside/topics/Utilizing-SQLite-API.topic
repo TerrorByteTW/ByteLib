@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic SYSTEM "https://resources.jetbrains.com/writerside/1.0/xhtml-entities.dtd">
+<topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/topic.v2.xsd"
+       id="Utilizing-SQLite-API" title="Utilizing SQLite API">
+
+    <title>
+        Utilizing SQLite API
+    </title>
+    <p>To use the SQLite API, you need to inject <code>SqliteDatabase</code> wherever needed.</p>
+    <p><code>SqliteDatabase</code> houses convenient helper functions for basic CRUD operations (insert, update, delete,
+        selectAll, and
+        selectWhere), but also exposes type-safe functions that allow raw SQL usage (<code>execute</code>, <code>transaction</code>,
+        <code>query</code>,
+        <code>queryOne</code>, <code>executeAsync</code>, and <code>queryAsync</code>).</p>
+    <p>You should first define a contract for the data you're storing. A good way to do this would be via a record.</p>
+
+    <code-block lang="java">
+public record TrackedWorld(
+        String world,
+        World.Environment environment,
+        boolean enabled,
+        Instant expiresAt
+) {
+}
+</code-block>
+    <p>Now that your DTO has been created, you may also optionally create a <code>Table</code> if you plan on just using
+        the basic CRUD
+        operations. These operations are nice as they abstract away raw SQL but do not allow as much customization.</p>
+
+    <code-block lang="java">
+public final class Tables {
+    public static final Table WORLDS = Table.of(&quot;worlds&quot;);
+    public static final Table.Column&lt;String&gt; world = WORLDS.col(&quot;world&quot;, SqlType.TEXT);
+    public static final Table.Column&lt;World.Environment&gt; dimension = WORLDS.col(&quot;dimension&quot;, PaperSqlTypes.ENV);
+    public static final Table.Column&lt;Boolean&gt; enabled = WORLDS.col(&quot;enabled&quot;, SqlType.BOOLEAN);
+    public static final Table.Column&lt;String&gt; updatedAt = WORLDS.col(&quot;updatedAt&quot;, SqlType.TEXT);
+    public static final Table.Column&lt;Instant&gt; expiresAt = WORLDS.col(&quot;expiresAt&quot;, PaperSqlTypes.INSTANT);
+
+    private Tables() {
+    }
+}
+</code-block>
+    <p>Notice how the <code>WORLDS</code> table has an <code>updatedAt</code> column while the record does not. Your
+        record does not necessarily
+        need to contain all columns your table will have unless you plan on <code>SELECT</code>ing these. Only columns
+        that will be
+        returned in <code>ResultSet</code>s will need to be listed in your record. For the CRUD operations, you must
+        list all columns in
+        your <code>Table</code>, as those use <code>SELECT *</code> under the hood.</p>
+    <p>Finally, let's do some querying! Let's do a basic query for if a world's dimension is enabled</p>
+
+    <code-block lang="java">
+WorldPauseStatus status = db.queryOne( &quot;&quot;&quot;
+        SELECT enabled, expiresAt
+        FROM dimensionpause_worlds
+        WHERE world = ? AND dimension = ?;
+        &quot;&quot;&quot; ,
+        row -&gt; new WorldPauseStatus(
+                row.bool(&quot;enabled&quot;),
+                row.get(&quot;expiresAt&quot;, PaperSqlTypes.INSTANT)
+        ),
+        Param.text(world), Tables.dimension.param(dimension));
+</code-block>
+    <p>Let's break this down. I don't want the entire table returned to me, so I'm not using the built-in CRUD
+        operations.
+        Instead, I'm using the <code>queryOne</code> function. I pass in raw SQL in the first argument, and the second
+        argument is a
+        <code>RowMapper</code>. <code>RowMapper</code>s tell the API how to convert the ResultSet to an object. <code>row</code>
+        refers to <code>Row</code>, a
+        super tiny lightweight wrapper around a ResultSet that tells <code>SqliteDatabase</code> how to convert a column
+        to a Java object.</p>
+    <p>You may have noticed a few things here:</p>
+    <list>
+        <li><p><code>row.get(&quot;expiresAt&quot;, PaperSqlTypes.INSTANT)</code></p></li>
+        <li><p><code>Param.text(world)</code></p></li>
+        <li><p><code>Tables.dimension.param(dimension)</code></p></li>
+    </list>
+    <p>Let's go over these:</p>
+    <list type="decimal">
+        <li><p><code>row.get()</code> is a method that allows you to define a custom type when parsing a
+            <code>ResultSet</code> column for a row.
+            <code>PaperSqlTypes</code> is a custom type in DimensionPause that contains a bunch of static <code>SqlType&lt;T&gt;</code>s.
+            There are already
+            built-in <code>SqlType&lt;T&gt;</code>'s for <code>int</code>, <code>long</code>, <code>double</code>,
+            <code>String</code>, <code>byte[]</code>, <code>UUID</code>, and <code>Boolean</code> (Note that Boolean is
+            an Integer in SQLite, so be sure to set up your <code>boolean</code> columns as <code>int</code>) as well as
+            associated methods for row (
+            <code>row.string</code>, <code>row.i32</code>, <code>row.i64</code>, <code>row.f64</code>, etc.), but you
+            can of course create your own by referring to
+            the <a href="Custom-Data-Types.topic">Custom Data Types</a> documentation.</p></li>
+        <li>
+            <p><code>Param.text(world)</code> is similar to <code>row.get()</code>, except it converts Java objects to
+                SQLite instead of
+                converting SQLite results to Java objects. It's meant to explicitly bind parameters to a concrete type.
+                If <code>Param</code>
+                doesn't contain a type for your data, you can create your own by using <code>SqlType&lt;T&gt;</code> and
+                calling
+                <code>Param.of(SqlType&lt;T&gt;, value)</code>. For example, to
+                <emphasis>write</emphasis>
+                an <code>Instant</code> instead of reading one like in the previous
+                example, you can do <code>Param.of(PaperSqlTypes.INSTANT, expiresAt)</code></p>
+        </li>
+        <li><p><code>Tables.dimension.param(dimension)</code> is the exact equivalent of <code>Param.of(PaperSqlTypes.ENV,
+            dimension)</code>.
+            <code>Table.Column&lt;T&gt;</code> contains a method <code>param(T value)</code> which returns a <code>Param&lt;T&gt;</code>
+            of the column. This is useful for if
+            you already have the type defined, and you don't want to type <code>Param.of</code> everywhere, and is also
+            necessary when using
+            the CRUD operators.</p></li>
+    </list>
+
+</topic>

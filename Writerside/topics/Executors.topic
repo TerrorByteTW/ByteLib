@@ -1,39 +1,45 @@
-# Executors
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic SYSTEM "https://resources.jetbrains.com/writerside/1.0/xhtml-entities.dtd">
+<topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/topic.v2.xsd"
+       id="Executors" title="Executors">
 
-The Commands API supports two ways of executing a command.
-
-## Inline lambda
-
-Inline lambda's provide the `CommandContext<CommandSourceStack>` for a command, but do not provide any other
-functionality. Use this for simple commands that don't require any complex logic.
-
-<code-block lang="java" noinject="true">
+    <title>
+        Executors
+    </title>
+    <p>The Commands API supports two ways of executing a command.</p>
+    <chapter title="Inline lambda" id="inline-lambda">
+        <p>Inline lambda's provide the <code>CommandContext&lt;CommandSourceStack&gt;</code> for a command, but do not
+            provide any other
+            functionality. Use this for simple commands that don't require any complex logic.</p>
+        <code-block lang="java" noinject="true">
 .executes(ctx -> {
     return 1;
 })
 </code-block>
-
-## Callback class
-
-For large and/or complex commands, putting the entire command in a single lambda may prove difficult. A version of the
-`executes()` method exists which takes a `CommandCallback` class and a factory, and executes the command that way.
-
-<code-block lang="java" noinject="true">
+    </chapter>
+    <chapter title="Callback class" id="callback-class">
+        <p>For large and/or complex commands, putting the entire command in a single lambda may prove difficult. A
+            version of the
+            <code>executes()</code> method exists which takes a <code>CommandCallback</code> class and a factory, and
+            executes the command that way.</p>
+        <code-block lang="java" noinject="true">
 .executes(MyCallback.class, factory)
 </code-block>
-
-To use a Callback class, first create a constructor for your `CommandsRegistration` and inject `CommandFactory`, which
-you previously saw in the Quick Start section.
-
-Create a new class and ensure it implements `CommandCallback`. `CommandCallback` classes require an
-`execute(CommandContext&lt;CommandSourceStack&gt; context)` method. However, they are also able to inject dependencies
-in
-their constructor (Thanks to the `CommandFactory` you provided to the `LiteralNode`'s `executes()` method).
-
-Below is an example of a `CommandCallback` class. This would be passed into the `executes()` method in your
-`CommandRegistration` implementation and executed from there:
-
-<code-block lang="java" noinject="true">
+        <p>To use a Callback class, first create a constructor for your <code>CommandsRegistration</code> and inject
+            <code>CommandFactory</code>, which
+            you previously saw in the Quick Start section.</p>
+        <p>Create a new class and ensure it implements <code>CommandCallback</code>. <code>CommandCallback</code>
+            classes require an
+            <code>execute(CommandContext&amp;lt;CommandSourceStack&amp;gt; context)</code> method. However, they are
+            also able to inject dependencies
+            in
+            their constructor (Thanks to the <code>CommandFactory</code> you provided to the <code>LiteralNode</code>'s
+            <code>executes()</code> method).</p>
+        <p>Below is an example of a <code>CommandCallback</code> class. This would be passed into the
+            <code>executes()</code> method in your
+            <code>CommandRegistration</code> implementation and executed from there:</p>
+        <code-block lang="java" noinject="true">
 public class MyCommandCallback implements CommandCallback {
 
     private final BytePluginConfig config;
@@ -52,18 +58,17 @@ public class MyCommandCallback implements CommandCallback {
 
 }
 </code-block>
-
-## Inherited executors
-
-One special feature of ByteLib that Brigadier does not support is "inherited executors."
-
-Let's say you are making a command that has a bunch of optional arguments but you want the same handler to handle it.
-You'd have to define the same ".executes()" lambda on every single node of the tree. With ByteLib, the Commands API will
-automatically pass down the parent node's `.executes()` method to branches in the tree unless explicitly overridden.
-
-Take this snippet from the "Honeypot" plugin:
-
-<code-block lang="java" noinject="true">
+    </chapter>
+    <chapter title="Inherited executors" id="inherited-executors">
+        <p>One special feature of ByteLib that Brigadier does not support is &quot;inherited executors.&quot;</p>
+        <p>Let's say you are making a command that has a bunch of optional arguments but you want the same handler to
+            handle it.
+            You'd have to define the same &quot;.executes()&quot; lambda on every single node of the tree. With ByteLib,
+            the Commands API will
+            automatically pass down the parent node's <code>.executes()</code> method to branches in the tree unless
+            explicitly overridden.</p>
+        <p>Take this snippet from the &quot;Honeypot&quot; plugin:</p>
+        <code-block lang="java" noinject="true">
 .then(
     CommandDsl.literal("history")
         .requires(
@@ -102,10 +107,8 @@ Take this snippet from the "Honeypot" plugin:
                 .executes(HoneypotHistory.class, factory))
 )
 </code-block>
-
-Without inherited executors, you'd have to write this instead:
-
-<code-block lang="java" noinject="true">
+        <p>Without inherited executors, you'd have to write this instead:</p>
+        <code-block lang="java" noinject="true">
 .then(
     CommandDsl.literal("history")
         .requires(
@@ -148,6 +151,10 @@ Without inherited executors, you'd have to write this instead:
         .executes(HoneypotHelp.class, factory)
 )
 </code-block>
+        <p>Every single tree needs an <code>execute()</code> branch in Brigadier. In ByteLib, the parent's executor is
+            passed down unless it's
+            overridden by an explicit call to <code>executes()</code>. This happens automatically and cannot be
+            disabled.</p>
+    </chapter>
 
-Every single tree needs an `execute()` branch in Brigadier. In ByteLib, the parent's executor is passed down unless it's
-overridden by an explicit call to `executes()`. This happens automatically and cannot be disabled.
+</topic>

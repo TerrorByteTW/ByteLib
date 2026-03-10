@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic SYSTEM "https://resources.jetbrains.com/writerside/1.0/xhtml-entities.dtd">
+<topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/topic.v2.xsd"
+       id="Plugin-Loader" title="ByteLib Loader">
+
+    <title>
+        ByteLib Loader
+    </title>
+    <primary-label ref="subject-to-change"/>
+    <p>The ByteLib
+        <tooltip term="loader">loader</tooltip>
+        is responsible for loading ByteLib's dependencies for plugins using
+        it to operate. You should've configured your plugin to use it in the <a href="Bootstrapping.topic">previous
+            topic</a>.
+    </p>
+    <p>Currently, the loader is
+        <emphasis>not configurable</emphasis>
+        , but it is also
+        <emphasis>not mandatory</emphasis>
+        to use it. The loader is defined as follows:
+    </p>
+    <include from="code_snippets.topic" element-id="bytelib-loader"/>
+    <p>If you need or want to use your own loader, as long as it includes those two dependencies, then you do not have
+        to use the
+        included one. The loader is only called by Paper, ByteLib does not do anything with it itself.</p>
+
+</topic>

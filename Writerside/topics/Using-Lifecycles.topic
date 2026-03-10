@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic SYSTEM "https://resources.jetbrains.com/writerside/1.0/xhtml-entities.dtd">
+<topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/topic.v2.xsd"
+       id="Using-Lifecycles" title="Using Lifecycles">
+
+    <title>
+        Using Lifecycles
+    </title>
+    <p>ByteLib automatically discovers classes implementing the <code>PluginLifecycle</code> interface. This interface
+        allows overriding
+        the standard Paper lifecycle events. Using <code>PluginLifecycle</code> enables you to use Dependency Injection
+        within your lifecycle classes, meaning
+        you can inject dependencies for use in your <code>onEnable</code>, <code>onDisable</code>, and even
+        <code>onLoad</code> methods!</p>
+    <p>As with Paper's lifecycle system, you only have to override lifecycle methods you intend on using.</p>
+    <code-block lang="java">
+public final class MyLifecycle implements PluginLifecycle {
+    private final BytePluginConfig config;
+    
+    // You don't need to inject anything into your constructor, or even have one at all.
+    // This example just demonstrates that you can.
+    @Inject
+    public MyLifecycle([[[BytePluginConfig|Configuration-Translation.topic]]] config) {
+        this.config = config;
+    }
+    
+    @Override
+    public void onEnable() {
+        config.config().getString(&quot;some-string&quot;);
+        // Do more work...
+    }
+}
+</code-block>
+    <p>ByteLib makes liberal use of the Lifecycles API. The Lifecycles API is even used internally when registering
+        Commands
+        via the <a href="Commands-API.topic">Commands API</a>. Lifecycles are a powerful way to separate your plugin's code at build
+        time.</p>
+    <p>
+        <a href="https://github.com/TerrorByteTW/ByteLib/blob/master/src/main/java/org/reprogle/bytelib/commands/CommandsLifecycle.java">You
+            can see an example of the Lifecycle API being used here</a>.</p>
+
+</topic>

@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic SYSTEM "https://resources.jetbrains.com/writerside/1.0/xhtml-entities.dtd">
+<topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/topic.v2.xsd"
+       id="Getting-Started"
+       title="Getting Started">
+
+    <title>Getting Started</title>
+
+    <p>
+        To better understand the design of ByteLib and how it works, a good place to start is to review
+        the <a href="Core-Design-Principles.topic">core design principles</a> of the library.
+        If you're not interested in the technical details, you can safely skip that topic.
+    </p>
+
+    <p>
+        ByteLib is built on top of the experimental
+        <a href="https://docs.papermc.io/paper/dev/getting-started/paper-plugins/">Paper Plugin API</a>.
+        This API requires some manual configuration from developers, so ByteLib provides clear
+        documentation for the setup process.
+    </p>
+
+    <tip>
+        <p>
+            If you're new to ByteLib, start with the bootstrapping documentation and then
+            explore the available APIs.
+        </p>
+    </tip>
+
+    <list type="bullet">
+        <li>
+            <p>
+                Review the <a href="Bootstrapping.topic">Bootstrapping</a> topic to learn how to
+                <tooltip term="bootstrap">bootstrap</tooltip>
+                your plugin to use ByteLib.
+            </p>
+        </li>
+
+        <li>
+            <p>
+                Review the <a href="Plugin-Loader.topic">Plugin Loader</a> documentation to learn how
+                the Paper <code>PluginLoader</code> works in ByteLib.
+            </p>
+        </li>
+    </list>
+
+    <chapter title="ByteLib APIs" id="bytelib-apis">
+
+        <p>
+            ByteLib provides several APIs that simplify plugin development. All APIs are designed
+            with Dependency Injection at their core, making them easy to integrate anywhere in
+            your plugin.
+        </p>
+
+        <p>
+            Explore the following topics to learn more about each API.
+        </p>
+
+        <chapter title="Config API" id="config-api">
+
+            <p>
+                The <a href="Configuration-Translation.topic">Config API</a> is an opinionated,
+                lightweight wrapper around the BoostedYAML library that simplifies interacting
+                with configuration files.
+            </p>
+
+            <p>
+                The API also includes utilities for handling translations and provides native
+                support for MiniMessage.
+            </p>
+
+        </chapter>
+
+        <chapter title="Lifecycles API" id="lifecycles-api">
+
+            <p>
+                The <a href="Lifecycle-API.topic">Lifecycles API</a> allows ByteLib plugins to define
+                any number of <code>onLoad</code>, <code>onEnable</code>, and <code>onDisable</code>
+                lifecycle hooks.
+            </p>
+
+            <p>
+                This allows developers to keep their main plugin class thin while separating
+                responsibilities into dedicated lifecycle components.
+            </p>
+
+            <p>
+                Lifecycle handlers can also be executed in a defined order when required.
+            </p>
+
+        </chapter>
+
+        <chapter title="Commands API" id="commands-api">
+
+            <p>
+                The <a href="Commands-API.topic">Commands API</a> allows developers to easily create
+                and register Brigadier commands for their plugin.
+            </p>
+
+            <p>
+                While conceptually similar to Brigadier, ByteLib's API provides a more opinionated
+                interface for command creation and includes additional utilities for common
+                command patterns.
+            </p>
+
+            <p>
+                Like all ByteLib systems, the Commands API integrates directly with Google Guice
+                Dependency Injection.
+            </p>
+
+        </chapter>
+
+        <chapter title="SQLite API" id="sqlite-api">
+
+            <p>
+                One of ByteLib's most powerful features is the
+                <a href="SQLite-API.topic">SQLite API</a>, which allows developers to easily create and
+                interact with SQLite databases in a type-safe, object-oriented manner.
+            </p>
+
+            <p>
+                The API preserves the flexibility of raw SQL while providing higher-level tools
+                for common database interactions.
+            </p>
+
+        </chapter>
+
+    </chapter>
+
+</topic>

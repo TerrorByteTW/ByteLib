@@ -4,37 +4,37 @@
 
 <instance-profile id="bd"
                   name="ByteLib Documentation"
-                  start-page="Welcome-to-ByteLib.md">
+                  start-page="Welcome-to-ByteLib.topic">
 
-    <toc-element topic="Welcome-to-ByteLib.md"/>
-    <toc-element topic="Getting-Started.md">
-        <toc-element topic="Bootstrapping.md"/>
-        <toc-element topic="Plugin-Loader.md"/>
-        <toc-element topic="Core-Design-Principles.md"/>
+    <toc-element topic="Welcome-to-ByteLib.topic"/>
+    <toc-element topic="Getting-Started.topic">
+        <toc-element topic="Bootstrapping.topic"/>
+        <toc-element topic="Plugin-Loader.topic"/>
+        <toc-element topic="Core-Design-Principles.topic"/>
     </toc-element>
-    <toc-element topic="Configuration-Translation.md">
-        <toc-element topic="Creating-Configuration-Files.md"/>
-        <toc-element topic="Adding-Custom-Configurations.md"/>
-        <toc-element topic="Handling-Translations.md"/>
+    <toc-element topic="Configuration-Translation.topic">
+        <toc-element topic="Creating-Configuration-Files.topic"/>
+        <toc-element topic="Adding-Custom-Configurations.topic"/>
+        <toc-element topic="Handling-Translations.topic"/>
     </toc-element>
-    <toc-element topic="Lifecycle-API.md">
-        <toc-element topic="Using-Lifecycles.md"/>
-        <toc-element topic="Lifecycle-Prioritization.md"/>
+    <toc-element topic="Lifecycle-API.topic">
+        <toc-element topic="Using-Lifecycles.topic"/>
+        <toc-element topic="Lifecycle-Prioritization.topic"/>
     </toc-element>
-    <toc-element topic="Commands-API.md">
-        <toc-element topic="Quick-Start.md"/>
-        <toc-element topic="Create-a-Command.md"/>
-        <toc-element topic="Permission-Checks.md"/>
-        <toc-element topic="Executors.md"/>
-        <toc-element topic="Arguments-Suggestions.md"/>
-        <toc-element topic="DslCommandRegistration.md"/>
+    <toc-element topic="Commands-API.topic">
+        <toc-element topic="Quick-Start.topic"/>
+        <toc-element topic="Create-a-Command.topic"/>
+        <toc-element topic="Permission-Checks.topic"/>
+        <toc-element topic="Executors.topic"/>
+        <toc-element topic="Arguments-Suggestions.topic"/>
+        <toc-element topic="DslCommandRegistration.topic"/>
     </toc-element>
-    <toc-element topic="SQLite-API.md">
-        <toc-element topic="Quick-Start-SQLite.md" />
-        <toc-element topic="Configuring-SQLite-API.md"/>
-        <toc-element topic="Utilizing-SQLite-API.md"/>
-        <toc-element topic="CRUD-Operations.md"/>
-        <toc-element topic="Custom-Data-Types.md"/>
-        <toc-element topic="Migrations.md"/>
+    <toc-element topic="SQLite-API.topic">
+        <toc-element topic="Quick-Start-SQLite.topic" />
+        <toc-element topic="Configuring-SQLite-API.topic"/>
+        <toc-element topic="Utilizing-SQLite-API.topic"/>
+        <toc-element topic="CRUD-Operations.topic"/>
+        <toc-element topic="Custom-Data-Types.topic"/>
+        <toc-element topic="Migrations.topic"/>
     </toc-element>
 </instance-profile>

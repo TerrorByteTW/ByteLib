@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic SYSTEM "https://resources.jetbrains.com/writerside/1.0/xhtml-entities.dtd">
+<topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/topic.v2.xsd"
+       id="Bootstrapping" title="ByteLib Bootstrapper">
+    <p>
+        The ByteLib
+        <tooltip term="bootstrap">bootstrapper</tooltip>
+        is the <b>core of ByteLib</b>.
+        It is responsible for:
+    </p>
+
+    <list type="bullet">
+        <li>configuring <b>Google Guice dependency injection</b></li>
+        <li>handling <b>plugin lifecycle hooks</b></li>
+        <li>registering <b>commands</b></li>
+        <li>initializing the plugin runtime</li>
+    </list>
+
+    <p>In short, <b>ByteLib lives and dies by its bootstrapper.</b></p>
+
+    <warning>
+        <p>
+            Paper-native plugins have unique properties that regular Bukkit/Spigot plugins do not,
+            such as <b>classloader isolation</b>.
+        </p>
+        <p>
+            Before continuing, review the differences in the Paper documentation:
+            <a href="https://docs.papermc.io/paper/dev/getting-started/paper-plugins/#differences">
+                Paper Plugin Differences
+            </a>
+        </p>
+    </warning>
+
+    <chapter title="Bootstrap a Plugin" id="bootstrap-a-plugin">
+        <p>
+            Bootstrapping a plugin simply means <b>configuring your plugin to run with ByteLib</b>. Because Paper
+            plugins define their <b>bootstrapper</b> and <b>loader</b> through
+            configuration, this setup must be done manually.
+        </p>
+
+        <p>
+            If you want to use ByteLib, the <b>ByteLib bootstrapper is mandatory</b>.
+            It cannot be replaced or modified.
+        </p>
+
+        <procedure title="Bootstrapping Overview" id="bootstrapping-overview">
+            <step>
+                <p>
+                    Create a <code>paper-plugin.yml</code> and register ByteLib's bootstrapper and
+                    loader classes.
+                </p>
+            </step>
+            <step>
+                <p>Extend <code>ByteLibPlugin</code> in your plugin's main class.</p>
+            </step>
+            <step>
+                <p>
+                    Create a <b>Google Guice module</b> that registers your plugin dependencies.
+                </p>
+            </step>
+            <step>
+                <p>
+                    Create one or more <b>Lifecycle classes</b> implementing
+                    <code>PluginLifecycle</code>.
+                </p>
+            </step>
+            <step>
+                <p>
+                    Create a <b>wiring class</b> to connect your Guice modules and lifecycle
+                    components.
+                </p>
+            </step>
+        </procedure>
+    </chapter>
+
+    <chapter title="Bootstrapping in Detail" id="bootstrapping-in-detail">
+        <chapter title="1. Create paper-plugin.yml" id="1-create-paper-plugin-yml">
+            <p>Create the configuration file in:</p>
+
+            <code-block lang="text">
+                src/main/resources/paper-plugin.yml
+            </code-block>
+
+            <p>Example (from DimensionPause):</p>
+
+            <include from="code_snippets.topic" element-id="paper-plugin"/>
+
+            <chapter title="Paper Plugin Concepts" id="paper-plugin-concepts">
+                <deflist>
+                    <def title="bootstrapper" id="bootstrapper">
+                        <p>
+                            The
+                            <tooltip term="bootstrap">bootstrapper</tooltip>
+                            controls
+                            <b>how the plugin is initialized</b>. It is responsible for:
+                        </p>
+
+                        <list type="bullet">
+                            <li>configuring internal <b>Guice modules</b></li>
+                            <li>performing initial <b>dependency injection</b></li>
+                            <li>initializing ByteLib internals</li>
+                        </list>
+
+                        <p>
+                            The bootstrapper requires your plugin's main class to extend
+                            <code>ByteLibPlugin</code>.
+                        </p>
+                    </def>
+
+                    <def title="loader" id="loader">
+                        <p>
+                            The
+                            <tooltip term="loader">loader</tooltip>
+                            defines the
+                            <b>runtime environment</b> your plugin loads into.
+                        </p>
+
+                        <p>According to Paper documentation, the loader is used to:</p>
+
+                        <list type="bullet">
+                            <li>construct the plugin classpath</li>
+                            <li>provide external dependencies</li>
+                        </list>
+
+                        <p>ByteLib's loader currently adds <b>BoostedYAML</b> and <b>Google Guice</b> to the plugin
+                            classpath.</p>
+                    </def>
+                </deflist>
+
+                <tip>
+                    <p>
+                        ByteLib's loader is <b>optional</b> if your plugin already supplies these
+                        dependencies.
+                    </p>
+                    <p>
+                        However, most developers should use the ByteLib loader to avoid dependency
+                        issues.
+                    </p>
+                </tip>
+            </chapter>
+        </chapter>
+
+        <chapter id="2-extend-bytelibplugin">
+            <title>2. Extend <code>ByteLibPlugin</code></title>
+            <p>Your plugin's main class must extend <code>ByteLibPlugin</code>.</p>
+
+            <include from="code_snippets.topic" element-id="bytelib-plugin"/>
+
+            <warning>
+                <p>Do <b>not expect</b> to inject your plugin's main class.</p>
+
+                <p>ByteLib binds the following types to the same instance:</p>
+
+                <list type="bullet">
+                    <li><code>JavaPlugin</code></li>
+                    <li><code>Plugin</code></li>
+                    <li>your plugin's main class</li>
+                </list>
+
+                <p>
+                    Although injecting those classes works, it will resolve to <code>ByteLibPlugin</code> anyway. it is
+                    recommended to inject
+                    <code>ByteLibPlugin</code> directly.
+                </p>
+            </warning>
+        </chapter>
+
+        <chapter title="3. Create a Guice Module" id="3-create-a-guice-module">
+            <p>Create a module responsible for <b>configuring dependency bindings</b> for your plugin. This module would
+                be responsible for binding dependencies that are specific to your plugin.</p>
+
+            <p>Example (from DimensionPause):</p>
+
+            <include from="code_snippets.topic" element-id="bytelib-module"/>
+        </chapter>
+
+        <chapter title="4. Create a Lifecycle Class" id="4-create-a-lifecycle-class">
+            <p>Lifecycle classes allow you to execute code during plugin lifecycle events. Your lifecycle class must
+                implement <code>PluginLifecycle</code>.</p>
+
+            <p>Just like Paper plugins, it can (but isn't required to) define <code>onLoad</code>, <code>onEnable</code>,
+                and <code>onDisable</code>.</p>
+
+            <p>Example:</p>
+
+            <include from="code_snippets.topic" element-id="bytelib-lifecycle"/>
+
+            <tip>
+                <p>You can use <code>@Inject</code> to inject dependencies into the class constructor for use in the
+                    lifecycle methods.</p>
+            </tip>
+        </chapter>
+
+        <chapter title="5. Wire Guice Together" id="5-wire-guice-together">
+            <p>Finally, connect all modules and lifecycle components.</p>
+
+            <p>ByteLib supports <b>three wiring conventions</b>.</p>
+
+            <tabs>
+                <tab id="method-1" title="Wiring Class">
+                    <include from="code_snippets.topic" element-id="bytelib-wiring-method-1" />
+                </tab>
+                <tab id="method-2" title="Nested Wiring Class">
+                    <include from="code_snippets.topic" element-id="bytelib-wiring-method-2" />
+                </tab>
+                <tab id="method-3" title="Service Loader">
+                    <include from="code_snippets.topic" element-id="bytelib-wiring-method-3" />
+                </tab>
+            </tabs>
+
+            <p>
+                If this seems complex, that's because <b>dependency injection introduces
+                additional structure</b>.
+            </p>
+            <p>
+                However, the benefit is <b>strong decoupling</b>, which makes large plugins
+                significantly easier to maintain and test.
+            </p>
+        </chapter>
+    </chapter>
+
+    <chapter title="Next Steps" id="next-steps">
+        <p>
+            After bootstrapping your plugin, configure the remaining ByteLib systems:
+        </p>
+
+        <list type="bullet">
+            <li><a href="Plugin-Loader.topic">Plugin Loader</a></li>
+            <li><a href="Configuration-Translation.topic">Config API</a></li>
+        </list>
+
+        <note>
+            <p>
+                ByteLib requires the <b>Config API</b> to be configured before the plugin can
+                fully bootstrap.
+            </p>
+        </note>
+    </chapter>
+</topic>

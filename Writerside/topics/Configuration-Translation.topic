@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic SYSTEM "https://resources.jetbrains.com/writerside/1.0/xhtml-entities.dtd">
+<topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/topic.v2.xsd"
+       id="Configuration-Translation" title="Config API">
+
+    <title>
+        Config API
+    </title>
+    <primary-label ref="subject-to-change"/>
+    <p>The Config API is a mandatory API in ByteLib. It's a lightweight wrapper
+        around <a href="https://github.com/dejvokep/boosted-yaml">BoostedYAML</a>. It supports reading and writing YAML
+        files in a highly
+        opinionated manner and also provides utilities for handling i18n.</p>
+    <p>Because the Config API only wraps BoostedYAML, its primary purpose is to make it easier to set up and use
+        BoostedYAML configurations. It is
+        <control>not</control>
+        its own Config framework.
+    </p>
+    <tip>
+        <p>You may see the phrases &quot;language file&quot;, &quot;translation file&quot; and/or &quot;translation&quot;
+            used interchangeably. They all refer
+            to the same thing: a file that contains translations for a plugin's messages.</p>
+    </tip>
+    <p>See <a href="Creating-Configuration-Files.topic">Creating Configuration Files</a> to get started.</p>
+    <chapter title="Plans for Future Updates" id="plans-for-future-updates" collapsible="true">
+        <p>BoostedYAML is a great library that I've used for years, and I've even contributed to it! However, I want
+            ByteLib to
+            need less manual setup for Config API, and that means using something more modern.</p>
+        <p>
+            <control>I've decided that, in ByteLib v2, BoostedYAML will be replaced with <a
+                    href="https://github.com/Exlll/ConfigLib">ConfigLib</a>.
+            </control>
+        </p>
+        <p>Note that ConfigLib uses code to generate config files, while BoostedYAML uses Bukkit's
+            <code>resources</code> folder. As a result,
+            the Config API
+            <emphasis>will</emphasis>
+            need to be reworked entirely to use ConfigLib's code generation system. The benefit of this will
+            be that it is more flexible and customizable, and less manual setup will be needed to use Config API.
+        </p>
+        <p>ByteLib will, of course, make it as easy as possible for developers to use the new Config API if they so
+            choose.</p>
+    </chapter>
+
+</topic>

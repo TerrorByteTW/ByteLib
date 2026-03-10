@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic SYSTEM "https://resources.jetbrains.com/writerside/1.0/xhtml-entities.dtd">
+<topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/topic.v2.xsd"
+       id="Adding-Custom-Configurations"
+       title="Custom Configurations">
+
+    <title>Custom Configurations</title>
+
+    <p>
+        ByteLib supports registering custom configurations alongside the standard plugin configuration
+        and language files. Custom configurations can be registered as optional or external-only, and
+        they do not require versioning, though they
+        <emphasis>can</emphasis>
+        be versioned when needed.
+    </p>
+
+    <chapter title="Registering New Configurations" id="registering-new-configurations">
+
+        <p>
+            To register custom configurations, inject <code>BytePluginConfig</code> and call
+            <code>register()</code>.
+        </p>
+
+        <code-block lang="java">
+public void register(String name, YamlSpec spec);
+        </code-block>
+
+        <p>
+            The <code>name</code> parameter is an internal identifier for the configuration.
+            The <code>spec</code> parameter is a
+            <code>BoostedYamlPluginConfig.YamlSpec</code> record containing the configuration
+            metadata for that file.
+        </p>
+
+        <tip>
+            <p>
+                The default configuration and language files are already registered as
+                <code>config</code> and <code>lang</code>. These names are reserved and cannot
+                be reused for custom configurations.
+            </p>
+        </tip>
+
+        <tip>
+            <p>
+                A configuration's registration name does not need to match its file path.
+                The name is only used internally when calling
+                <code>yaml(String name)</code>,
+                <code>reload(String name)</code>, or
+                <code>require(String name)</code>.
+            </p>
+        </tip>
+
+        <chapter title="Required Configurations" id="required-configurations">
+
+            <code-block lang="java">
+public static YamlSpec of(Path outFile, String resourcePath);
+
+public static YamlSpec of(Path outFile, String resourcePath, String versionKey);
+            </code-block>
+
+            <p>
+                <code>BoostedYamlPluginConfig.YamlSpec.of</code> defines a
+                <emphasis>required</emphasis>
+                configuration file. These files are bundled in the
+                plugin JAR and copied to the server when needed.
+            </p>
+
+            <deflist>
+                <def title="outFile" id="required-configurations-outfile">
+                    <p>
+                        The full output path of the file on the server.
+                        This path is
+                        <control>not</control>
+                        relative to the plugin data folder.
+                    </p>
+                    <tip>The easiest way to get the path of the data folder is to inject <code>ByteLibPlugin</code> and
+                        use the <code>getDataFolder()</code> method. This is a Paper method that will return the data folder
+                        for your plugin, specifically (see the below example).
+                    </tip>
+                </def>
+
+                <def title="resourcePath" id="required-configurations-resourcepath">
+                    <p>
+                        The path to the file inside the plugin JAR, relative to the
+                        <code>resources</code> directory.
+                    </p>
+                </def>
+
+                <def title="versionKey" id="required-configurations-versionkey">
+                    <p>
+                        An optional key that identifies the configuration version value used by
+                        BoostedYAML to determine whether the file should be updated.
+                    </p>
+                    <p>
+                        In the default <code>config.yml</code>, this is <code>file-version</code>.
+                    </p>
+                </def>
+            </deflist>
+
+        </chapter>
+
+        <chapter title="Optional Configurations" id="optional-configurations">
+
+            <p>
+                If you need a configuration file that is not bundled with the plugin and is instead
+                provided by the server administrator, register it as an external-only file using
+                <code>externalOnly()</code>.
+            </p>
+
+            <code-block lang="java">
+public static YamlSpec externalOnly(Path outFile);
+
+// Not really useful since an external file means there is no source of truth.
+// Versioning external-only files is generally pointless.
+public static YamlSpec externalOnly(Path outFile, String versionKey);
+            </code-block>
+
+            <p>
+                Unlike <code>of()</code>, <code>externalOnly()</code> does not take a
+                <code>resourcePath</code> because there is no bundled resource to copy from.
+            </p>
+
+            <tip>
+                <p>
+                    External-only configurations technically support versioning, but versioning
+                    requires a source of truth to compare against. Since an external-only file is
+                    its own source of truth, versioning is usually unnecessary.
+                </p>
+            </tip>
+
+        </chapter>
+
+    </chapter>
+
+    <chapter title="Reading Custom Configurations" id="reading-custom-configurations">
+
+        <p>
+            To read a custom configuration, use either <code>require(String name)</code> or
+            <code>yaml(String name)</code>.
+        </p>
+
+        <p>
+            Both methods return the registered <code>YamlDocument</code> when the configuration is
+            available.
+        </p>
+
+        <deflist>
+            <def title="require(String name)" id="reading-custom-configurations-require">
+                <p>
+                    Returns the configuration and throws an
+                    <code>IllegalStateException</code> if it is not registered.
+                </p>
+            </def>
+
+            <def title="yaml(String name)" id="reading-custom-configurations-yaml">
+                <p>
+                    Returns the configuration if it exists, otherwise <code>null</code>.
+                </p>
+            </def>
+        </deflist>
+
+        <p>
+            Use <code>require()</code> when missing configuration should fail loudly, and
+            use <code>yaml()</code> when the configuration is optional.
+        </p>
+
+    </chapter>
+
+    <chapter title="Example" id="example">
+
+        <p>
+            The example below registers a custom configuration file. <code>ByteLibPlugin</code>
+            is injected to access the plugin data folder, and a
+            <a href="Lifecycle-API.topic"><code>PluginLifecycle</code></a> is used to register
+            the file during the plugin's <code>onEnable</code> lifecycle stage.
+        </p>
+
+        <code-block lang="java">
+public class MyLifecycleClass implements PluginLifecycle {
+
+    private final BytePluginConfig config;
+    private final ByteLibPlugin plugin;
+
+    @Inject
+    public MyLifecycleClass(
+            BytePluginConfig config,
+            ByteLibPlugin plugin
+    ) {
+        this.config = config;
+        this.plugin = plugin;
+    }
+
+    @Override
+    public void onEnable() {
+        config.register(
+                &quot;customConfig&quot;,
+                BoostedYamlPluginConfig.YamlSpec.of(
+                        plugin.getDataFolder()
+                                .toPath()
+                                .resolve(&quot;customConfig.yml&quot;),
+                        &quot;customConfig.yml&quot;
+                )
+        );
+    }
+}
+        </code-block>
+
+    </chapter>
+
+</topic>
