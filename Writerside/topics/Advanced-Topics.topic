@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic SYSTEM "https://resources.jetbrains.com/writerside/1.0/xhtml-entities.dtd">
+<topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/topic.v2.xsd"
+       id="Advanced-Topics" title="Advanced Topics">
+
+    <title>
+        Advanced Topics
+    </title>
+    <p>
+        The SQLite API does a lot under the hood without the developer knowing. Depending on the complexity of your
+        queries or how your plugin is written, these things may affect your plugin's performance or
+        functionality, up to and including crashing the plugin.
+    </p>
+    <p>
+        This document has been provided to outline some common pitfalls developers may run in to and how to avoid them.
+    </p>
+    <chapter id="caching" title="Query Caching">
+        <p>The default configuration for the SQLite API enables an in-memory query cache. This cache stores queries and
+            their results and will return the cached result if a query is executed that matches an existing cache key
+            and the cache is within the configured TTL.</p>
+        <p>The default cache configuration means there is a potential for stale records to be returned when querying
+            data. The default TTL is 30 seconds, so cache records are considered invalid after this time. </p>
+        <p>By default, if a cached record is retrieved after 10 seconds but before the TTL, the record is refreshed.
+            Again, by default, the stale value will be served while the data is refreshed.</p>
+        <p>If a developer wishes to change these default values, they may do so by providing their own values to the
+            <code>CacheConfig</code> parameter of <code>SqliteConfig</code>. See <a href="Configuring-SQLite-API.topic">Configuring
+                SQLite API</a> for more information.</p>
+        <tip>Even though cache records are considered invalid after 30 seconds by default, the cache is not
+            automatically removed after that time. Cache records are only validated during a query, and invalid cache
+            records are removed after a query has been made, regardless of if that query touches that record or not.
+            Therefore, cache records are evicted after <i>at least</i>, not exactly at, 30 seconds.
+        </tip>
+    </chapter>
+    <chapter id="transaction-cache-invalidation" title="Cache Invalidation for Transactions">
+        <p>Because query cache is keyed on whole SQL queries and not rows or predicates, a transaction can change any
+            subset of rows in a table, and the cache has no dependency graph that says:</p>
+        <list>
+            <li>which cached queries read which row</li>
+            <li>which <code>WHERE</code> clauses are affected by a given write</li>
+            <li>whether aggregates like <code>COUNT(*)</code>, <code>SUM(...)</code>, or joins are now stale</li>
+        </list>
+        <p>So, after a transaction is committed to a table or tables, every cached query mentioning that table must be
+            invalidated.</p>
+        <p>For example, let's say each of the below queries is cached:</p>
+        <list>
+            <li><code>SELECT * FROM MY_TABLE WHERE id = 5</code></li>
+            <li><code>SELECT * FROM MY_TABLE WHERE status = 'ACTIVE'</code></li>
+            <li><code>SELECT count(*) FROM MY_TABLE</code></li>
+        </list>
+        <p>If a transaction updates even just one row in <code>MY_TABLE</code>, without full table-level invalidation,
+            any of those caches might now be wrong, and the cache layer cannot prove which ones are still valid.</p>
+    </chapter>
+    <chapter id="query-timeouts" title="Query Timeouts">
+        <p>With the SQLite API, queries can time out one of two ways:</p>
+        <list>
+            <li>If the <code>busyTimeoutMs</code> is exceeded while executing a query on a locked table</li>
+            <li>If the <code>mainThreadTimeout</code> is exceeded while running a blocking query on the server's primary
+                thread.
+            </li>
+        </list>
+        <chapter id="busy-timeout" title="Busy Timeout">
+            <p>The SQLite API sets <code>PRAGMA busy_timeout</code> equal to the value of <code>busyTimeoutMs</code>
+                to prevent timeouts caused by locked tables. This is a SQLite-level feature that will result in a <code>RuntimeException</code>
+                being thrown from the API. </p>
+        </chapter>
+        <chapter id="main-thread-timeout" title="Main Thread Timeout">
+            <p>With the latter, the SQLite API makes most database queries on the main thread. If a query is not run on
+                the Bukkit primary thread (As determined by <code>Bukkit.isPrimaryThread()</code>), then the timeout is
+                null. These queries should never time out.</p>
+            <p>However, for queries that <i>are</i> executed on the primary Bukkit thread (The default if you are using
+                any method except <code>queryAsync()</code> or <code>executeAsync()</code>), then the query is passed
+                into a <code>CompletableFuture</code> internally, and that future has its timeout set to whatever the
+                <code>mainThreadTimeout</code> is.</p>
+            <p>If that <code>CompletableFuture</code> times out before completing (i.e., the query did not finish in
+                time), then one of two things will occur based on the API's configured timeout behavior:</p>
+            <list>
+                <li>If <code>timeoutBehavior</code> is set to <code>FAIL_OPEN</code>, then the query result will be null
+                </li>
+                <li>If <code>timeoutBehavior</code> is set to <code>FAIL_CLOSED</code> or <code>THROW</code>, then a
+                    <code>DbTimeoutException</code> will be thrown describing what operation caused the timeout, and
+                    how long it took to actually time out. The stack trace is also included
+                </li>
+            </list>
+            <tip>
+                <p>
+                    If you call DB queries on separate threads or use the <code>executeAsync()</code> or
+                    <code>queryAsync()</code> methods, the timeout is set to null.
+                </p>
+            </tip>
+        </chapter>
+    </chapter>
+    <chapter id="threading" title="Query Threading">
+        <p>
+            Queries are, by default, executed on the main thread. The only time this does not occur is if you use <code>queryAsync()</code>
+            or <code>executeAsync()</code>, or if you execute queries using the <code>AsyncScheduler</code> in Paper.
+        </p>
+        <p>
+            Depending on the <code>mainThreadPolicy</code>, you may or may not see
+            <code>DbMainThreadDisallowedException</code> or log messages in the server console:
+        </p>
+        <deflist>
+            <def id="main-thread-disallow" title="DISALLOW">
+                <p>If <code>mainThreadPolicy</code> is set to <code>DISALLOW</code>, all queries must be executed on
+                    separate
+                    threads. Attempting to run them on the main thread (As determined by
+                    <code>Bukkit.isPrimaryThread()</code>)
+                    will result in a <code>DbMainThreadDisallowedException</code>.</p>
+            </def>
+            <def id="main-thread-warn" title="WARN">
+                <p>If <code>mainThreadPolicy</code> is set to <code>WARN</code>, queries are allowed to be executed on
+                    the main
+                    thread. However, if a query takes longer than the configured <code>slowQueryWarnThreshold</code>,
+                    then a log
+                    message will be output to console that says <code>[ByteLib-DB] Slow
+                        main-thread DB
+                        [opName]: [elapsed]ms</code>. If you see this message, optimize your queries!</p>
+            </def>
+            <def id="main-thread-allow" title="ALLOW">
+                <p>If <code>mainThreadPolicy</code> is set to <code>ALLOW</code>, queries are allowed on the
+                    main thread, and no log messages will be output to console, even if the query is blocking or
+                    exceedingly slow.
+                </p>
+            </def>
+        </deflist>
+        <p>To avoid timeout issues, it is recommended to run queries in separate threads.</p>
+    </chapter>
+</topic>

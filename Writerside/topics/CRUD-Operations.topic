@@ -4,88 +4,164 @@
        xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/topic.v2.xsd"
        id="CRUD-Operations" title="CRUD Operations">
 
-    <title>
-        CRUD Operations
-    </title>
-    <p>The SQLite API provides a set of basic CRUD operators that you can use to query data without writing raw SQL.</p>
-    <p>This is where tables really shine! Let's insert a single record into the DB. First, let's bring back our <code>WORLDS</code>
-        table
-        we created in a previous topic:</p>
+    <title>Convenience Methods</title>
+    <p>If you're not a fan of writing raw SQL, the SQLite API provides a set of convenience methods that you can use to
+        query data more easily.</p>
+    <chapter id="creating-tables" title="Creating Tables">
+        <p>To use the convenience methods, you must create a <code>Table</code>. A <code>Table</code> defines the name
+            in the database, as well as each column and its datatype.</p>
+        <p>Let's create a <code>Table</code> that represents our <code>ServerMember</code> object. Because a Table is an
+            object, we'll create a static class that contains all of our tables inside it. It is perfectly acceptable
+            (And recommended) to keep your <code>Table</code> objects static. They will never need instantiated and do
+            not hold state.</p>
+        <code-block lang="java">
+            public final class Tables {
+                public static final Table MEMBERS = Table.of(&quot;server_members&quot;);
+                public static final Table.Column&lt;UUID&gt; world = MEMBERS.col(&quot;name&quot;, SqlType.UUID_TEXT);
+                public static final Table.Column&lt;String&gt; name = MEMBERS.col(&quot;name&quot;, SqlType.TEXT);
+                public static final Table.Column&lt;Integer&gt; age = MEMBERS.col(&quot;enabled&quot;, SqlType.I32);
+                public static final Table.Column&lt;Boolean&gt; activeMember = MEMBERS.col(&quot;activeMember&quot;, SqlType.BOOLEAN);
 
-    <code-block lang="java">
-public final class Tables {
-    public static final Table WORLDS = Table.of(&quot;worlds&quot;);
-    public static final Table.Column&lt;String&gt; world = WORLDS.col(&quot;world&quot;, SqlType.TEXT);
-    public static final Table.Column&lt;World.Environment&gt; dimension = WORLDS.col(&quot;dimension&quot;, PaperSqlTypes.ENV);
-    public static final Table.Column&lt;Boolean&gt; enabled = WORLDS.col(&quot;enabled&quot;, SqlType.BOOLEAN);
-    public static final Table.Column&lt;String&gt; updatedAt = WORLDS.col(&quot;updatedAt&quot;, SqlType.TEXT);
-    public static final Table.Column&lt;Instant&gt; expiresAt = WORLDS.col(&quot;expiresAt&quot;, PaperSqlTypes.INSTANT);
-
-    private Tables() {
-    }
-}
-</code-block>
-    <code-block lang="java" noinject="true">
-db.insert(
-        WORLDS,
-        Map.of(
-                WORLD, &quot;world&quot;,
-        DIMENSION, World.Environment.NORMAL,
-        ENABLED, true,
-        EXPIRES_AT, null // This would actually fail because Map.of() doesn't allow null values, but it's here just for example
-)
-);
-</code-block>
-    <p>Because we already defined the concrete types for the <code>WORLDS</code> table, <code>SqliteDatabase</code> can
-        take the <code>Map</code> we provided,
-        convert each of those values to their SQLite-compatible types, and write to the correct table. It's that easy!
-    </p>
-    <note>
-        <p>Note the omission of the <code>updatedAt</code> column. Because this is a custom type we
-            defined, it has built-in handling for
-            null values. Therefore, if we want to pass null, we can just omit it. Check the <a
-                    href="Custom-Data-Types.topic">Custom Data Types</a>
-            documentation to learn how to define your own types</p>
-    </note>
-    <p>Let's say you want to query, it's just as easy:</p>
-
-    <code-block lang="java">
-List&lt;WorldPauseStatus&gt; statuses = db.query(
-        WORLDS,
-        row -&gt; new WorldPauseStatus(
-                row.bool(&quot;enabled&quot;),
-                row.get(&quot;expiresAt&quot;, PaperSqlTypes.INSTANT)
-        )
-);
-</code-block>
-    <p>The <code>query()</code> method takes a <code>Table</code> and a <code>RowMapper</code>. The Table is provided so
-        it knows which table to query when
-        calling <code>SELECT * FROM</code>, and the RowMapper is used to convert the results to objects.</p>
-    <p>Need to filter your query? Use <code>selectWhere</code></p>
-
-    <code-block lang="java">
-List&lt;WorldPauseStatus&gt; statuses = db.selectWhere(
-        WORLDS,
-        &quot;world = ?&quot;,
-        row -&gt; new WorldPauseStatus(
-                row.bool(&quot;enabled&quot;),
-                row.get(&quot;expiresAt&quot;, PaperSqlTypes.INSTANT)
-        ),
-        Param.text(&quot;world&quot;)
-);
-</code-block>
-    <p><code>selectWhere()</code> takes four or more arguments. The first and third arguments are the same as <code>query()</code>,
-        just representing
-        your
-        <code>Table</code> and <code>RowMapper</code>. However, the second argument is a raw SQL representation of a
-        <code>WHERE</code> clause. The fourth and
-        following arguments are <code>Param</code> objects representing the values that will be inserted into the <code>WHERE</code>
-        clause.</p>
-    <tip>
-        <p>Do not add <code>WHERE</code> in the filter string, <code>selectWhere()</code> does that automatically</p>
-    </tip>
-    <p>The API handles type conversion automatically, while still requiring you to write some manual SQL. It's not meant
-        to be
-        an ORM, but it is made to simplify your life a little bit</p>
-
+                // Because Tables.class is just a bunch of static objects, we're making the constructor private to hide it and prevent instantiation.
+                private Tables() {
+                }
+            }
+        </code-block>
+        <p>
+            To create our table, we call the static <code>Table.of()</code> method. The value passed into this method
+            becomes the table name in the database. Alongside the <code>Table</code> itself, we also create a bunch of
+            <code>Table.Column&lt;T&gt;</code>
+            objects, which represent the columns in the table itself.
+        </p>
+        <p>You may have noticed the <code>SqlType</code> object when defining the columns. The static <code>col()</code>
+            method on <code>Table</code> takes a column name and its backend datatype. Both <code>Param</code> and
+            <code>Row</code> use <code>SqlType</code> under the hood, and you will learn more about this type when
+            creating custom data types to use in the SQLite API. For now, just now that <code>SqlType</code> is the
+            object that contains the <i>real logic</i> for converting Java objects to SQLite datatypes and back.
+        </p>
+    </chapter>
+    <chapter id="using-convenience-methods" title="Using the Convenience Methods">
+        <p>Now that we have a <code>Table</code>, we can finally use the convenience methods. Several convenience
+            methods exist for developers to use:</p>
+        <list>
+            <li><code>selectAll()</code></li>
+            <li><code>selectWhere()</code></li>
+            <li><code>insert()</code></li>
+            <li><code>update()</code></li>
+            <li><code>delete()</code></li>
+        </list>
+        <chapter id="select-method">
+            <title><code>selectAll()</code></title>
+            <p>The first convenience method available is <code>selectAll()</code>. This method simply returns all
+                records in a table.</p>
+            <code-block lang="java">
+                List&lt;ServerMember&gt; members = db.selectAll(
+                        Tables.MEMBERS,
+                        row -> new ServerMember(
+                                row.uuid("uuid"),
+                                row.string("name"),
+                                row.i32("age"),
+                                row.bool("activeMember")
+                        ));
+            </code-block>
+            <p>When you use any of the convenience methods, the first parameter is always the Table. Depending on the
+                method, you may also provide a <code>RowMapper</code> or a list of <code>Param</code> objects.</p>
+        </chapter>
+        <chapter id="select-where-method">
+            <title><code>selectWhere()</code></title>
+            <p>A similar method to <code>selectAll()</code> is <code>selectWhere()</code>. This method, as the name
+                implies, lets you select objects using a <code>WHERE</code> clause. This method still returns a list,
+                but will only return objects that meet your filter criteria.</p>
+            <code-block lang="java">
+                List&lt;ServerMember&gt; members = db.selectWhere(
+                        Tables.MEMBERS,
+                        "name = ?",
+                        row -> new ServerMember(
+                                row.uuid("uuid"),
+                                row.string("name"),
+                                row.i32("age"),
+                                row.bool("activeMember")
+                        ),
+                        Tables.name.param("TerrorByte"));
+            </code-block>
+            <p>
+                The second argument is a SQL <code>WHERE</code> clause. You are still required to type some raw SQL
+                here, but not much. Do not include the <code>WHERE</code> keyword, as it is automatically prepended by
+                the SQLite API for you.
+            </p>
+            <p>
+                We can provide <code>Param</code> arguments as normal to replace the placeholders in the where clause.
+                However, instead of explicitly providing a <code>Param.text("TerrorByte")</code> argument, we have used
+                a new helper method, <code>Table.Column&lt;T&gt;#param()</code>. This method returns the correct type of
+                <code>Param</code> automatically instead of you having to know what type that column is represented by.
+                This is especially useful when using custom data types or when working with large tables.
+            </p>
+        </chapter>
+        <chapter id="insert-method">
+            <title><code>insert()</code></title>
+            <p>You can insert records into a table with the <code>insert()</code> method. This method takes a <code>Table</code>
+                in the first argument, and a <code>Map</code> in the second argument. This Map maps values to columns.
+            </p>
+            <code-block lang="java" noinject="true">
+                int affectedRows = db.insert(
+                    Tables.MEMBERS,
+                    Map.of(
+                        Tables.uuid, new UUID(),
+                        Tables.name, "TerrorByte",
+                        Tables.age, 27,
+                        Tables.activeMember, true
+                    ));
+            </code-block>
+            <p>In the <code>Map</code>, you should provide a value for each column in the table. If you do not provide a
+                column, it will be omitted from the <code>INSERT</code> query. If null values are acceptable in your DB,
+                this is fine. However, if SQLite expects a value, your insert will fail.</p>
+            <p>The return value of this method is the number of rows affected, just like <code>execute()</code> which we
+                read about in a previous guide.</p>
+        </chapter>
+        <chapter id="update-method">
+            <title><code>update()</code></title>
+            <p>If you need to update a specific record or records, you may use the <code>update()</code> method. This
+                method takes a <code>Table</code> in the first argument, and a <code>Map</code> in the second argument,
+                just like with <code>insert()</code> However, it also takes a <code>WHERE</code> clause in a third
+                argument, and
+                a bunch of <code>Param</code> objects in the fourth and later arguments.
+            </p>
+            <code-block lang="java" noinject="true">
+                int affectedRows = db.update(
+                    Tables.MEMBERS,
+                    Map.of(
+                        Tables.uuid, new UUID(),
+                        Tables.name, "TerrorByte",
+                        Tables.age, 27,
+                        Tables.activeMember, true
+                    ),
+                    &quot;age = ?&quot;,
+                    Tables.age.param(26)
+                );
+            </code-block>
+            <p>In the above example, any <code>ServerMember</code> whose age is 26 will be updated with a new UUID, the
+                name of "TerrorByte", the age of 27, and will be set as an active member. This isn't a great example,
+                but shows how powerful the <code>update()</code> method can be.</p>
+            <p>The return value of this method is the number of rows affected, just like <code>insert()</code></p>
+        </chapter>
+        <chapter id="delete-method">
+            <title><code>delete()</code></title>
+            <p>The last convenience method is <code>delete()</code>. This
+                method takes a <code>Table</code> in the first argument, and a <code>WHERE</code> clause in the second
+                argument. The last argument, as expected, is a bunch of <code>Param</code> objects.
+            </p>
+            <code-block lang="java" noinject="true">
+                int affectedRows = db.delete(
+                    Tables.MEMBERS,
+                    &quot;name = ?&quot;,
+                    Tables.name.param("TerrorByte")
+                );
+            </code-block>
+            <p>By now, these examples should be fairly straight forward. In this instance, all records with a
+                <code>name</code>
+                of "TerrorByte" will be deleted.</p>
+            <p>The return value of this method is the number of rows affected, just like <code>update()</code> and
+                <code>insert()</code></p>
+        </chapter>
+    </chapter>
 </topic>

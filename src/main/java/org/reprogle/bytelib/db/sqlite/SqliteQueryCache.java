@@ -66,6 +66,8 @@ final class SqliteQueryCache {
             return load(loader, sql, mapper, params);
         }
 
+        evictIfNeeded();
+
         QueryKey key = QueryKey.of(sql, mapper, params);
         long now = System.nanoTime();
         CacheEntry cached = queryCache.get(key);
@@ -143,6 +145,12 @@ final class SqliteQueryCache {
     }
 
     private void evictIfNeeded() {
+        Duration ttl = config.cache().ttl();
+        long now = System.nanoTime();
+        if (ttl != null && !ttl.isZero() && !ttl.isNegative()) {
+            queryCache.entrySet().removeIf(entry -> entry.getValue().isExpired(now, ttl));
+        }
+
         int maxSize = config.cache().maxSize();
         if (isCachingDisabled(maxSize) || maxSize == -1) return;
         int size = queryCache.size();

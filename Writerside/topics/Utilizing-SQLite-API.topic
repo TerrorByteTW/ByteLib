@@ -7,107 +7,297 @@
     <title>
         Utilizing SQLite API
     </title>
-    <p>To use the SQLite API, you need to inject <code>SqliteDatabase</code> wherever needed.</p>
-    <p><code>SqliteDatabase</code> houses convenient helper functions for basic CRUD operations (insert, update, delete,
-        selectAll, and
-        selectWhere), but also exposes type-safe functions that allow raw SQL usage (<code>execute</code>, <code>transaction</code>,
-        <code>query</code>,
-        <code>queryOne</code>, <code>executeAsync</code>, and <code>queryAsync</code>).</p>
-    <p>You should first define a contract for the data you're storing. A good way to do this would be via a record.</p>
+    <p>Once <code>SqliteModule</code> is configured, you are able to inject <code>SqliteDatabase</code> into your code.
+    </p>
+    <p>
+        <code>SqliteDatabase</code> is the entrypoint to the SQLite API and houses functions for querying, filtering,
+        updating, inserting, and deleting records. It also contains helper functions which entirely abstract away raw
+        SQL if you don't want to have to type SQL.
+    </p>
+    <chapter id="get-started" title="Getting Started">
+        <p>
+            On its own, the SQLite API just provides ways of querying and storing data. It does not handle setting up
+            your database aside from creating the file on disk.
+        </p>
+        <p>In this guide (And in all future SQLite API guides) we will use the example of a "Server Member", which will
+            represent a player who is a long-time member of your server.</p>
+        <chapter id="repository-setup" title="Create a Repository">
+            <p>The SQLite API only provides methods to read and write to your database; it does not care <i>how</i> this
+                is done. While many patterns exist for managing databases, this guide will use the
+                <tooltip term="repository">repository</tooltip>
+                pattern. An explanation of what the repository pattern is and why it is useful are outside the scope of
+                this guide.
+            </p>
+            <p>Begin by creating a new class. Naming conventions typically dictate the class ends with "Repository", so
+                we'll name ours <code>ServerMemberRepository</code>. Create this class and inject
+                <code>SqliteDatabase</code>.</p>
+            <tip>If you have not yet set up the <a href="Quick-Start-SQLite.topic">SQLite
+                Module</a>, be sure to do so!
+            </tip>
+            <code-block lang="java">
+                public final class ServerMemberRepository {
+                    private SqliteDatabase db;
 
-    <code-block lang="java">
-public record TrackedWorld(
-        String world,
-        World.Environment environment,
-        boolean enabled,
-        Instant expiresAt
-) {
-}
-</code-block>
-    <p>Now that your DTO has been created, you may also optionally create a <code>Table</code> if you plan on just using
-        the basic CRUD
-        operations. These operations are nice as they abstract away raw SQL but do not allow as much customization.</p>
+                    public ServerMemberRepository(SqliteDatabase db) {
+                        this.db = db;
+                    }
+                }
+            </code-block>
+            <p>If you have multiple different objects you would like to read &amp; write, it is recommended to create
+                separate repositories for each of them.</p>
+        </chapter>
+        <chapter id="dto-creation" title="Create a DTO">
+            <p>
+                Although we have our repository, we have no way of representing our <code>ServerMember</code> object in
+                code. To do so, we need to create a storage object, commonly referred to as a
+                <b>
+                    <tooltip term="dto">DTO.</tooltip>
+                </b>
+            </p>
+            <p>You may either create the DTO in a separate file, or you may create it as a nested class in your
+                repository. This is up to you.</p>
+            <tip>
+                <p>Records are used in this guide. However, you may use classes if you wish.</p>
+                <p>Use a record if you don't expect to modify the object after creation. Use a class if you expect to
+                    modify the
+                    object after creation.</p>
+            </tip>
+            <code-block lang="java">
+                public record ServerMember(
+                        UUID uuid,
+                        String name,
+                        int age,
+                        boolean activeMember
+                ) {
+                }
+            </code-block>
+            <p>
+                We now have an object that represents a single row in our database. However, we still need to create our
+                database schema to store these objects. Let's go ahead and do that now.
+            </p>
+        </chapter>
+        <chapter id="creating-schema" title="Create Database Schema">
+            <p>
+                The SQLite API is designed to look and feel like an ORM, but it does not operate like one. Among other
+                things, the SQLite API does not create tables, constraints, indexes, or any other database object. The
+                developer is responsible for creating these objects.
+            </p>
+            <p>Open <code>ServerMemberRepository</code> and create a method called <code>createSchema()</code>. In this
+                method, we will execute raw SQL by calling the <code>execute()</code> method on
+                <code>SqliteDatabase</code>. The sole role of <code>execute()</code> is to execute raw SQL. It is an
+                "escape hatch" if the SQLite API does not provide the functionality you need. In the case of schema
+                creation, it is mandatory.
+            </p>
+            <code-block lang="java">
+                public final class ServerMemberRepository {
+                    private SqliteDatabase db;
 
-    <code-block lang="java">
-public final class Tables {
-    public static final Table WORLDS = Table.of(&quot;worlds&quot;);
-    public static final Table.Column&lt;String&gt; world = WORLDS.col(&quot;world&quot;, SqlType.TEXT);
-    public static final Table.Column&lt;World.Environment&gt; dimension = WORLDS.col(&quot;dimension&quot;, PaperSqlTypes.ENV);
-    public static final Table.Column&lt;Boolean&gt; enabled = WORLDS.col(&quot;enabled&quot;, SqlType.BOOLEAN);
-    public static final Table.Column&lt;String&gt; updatedAt = WORLDS.col(&quot;updatedAt&quot;, SqlType.TEXT);
-    public static final Table.Column&lt;Instant&gt; expiresAt = WORLDS.col(&quot;expiresAt&quot;, PaperSqlTypes.INSTANT);
+                    public ServerMemberRepository(SqliteDatabase db) {
+                        this.db = db;
+                    }
 
-    private Tables() {
-    }
-}
-</code-block>
-    <p>Notice how the <code>WORLDS</code> table has an <code>updatedAt</code> column while the record does not. Your
-        record does not necessarily
-        need to contain all columns your table will have unless you plan on <code>SELECT</code>ing these. Only columns
-        that will be
-        returned in <code>ResultSet</code>s will need to be listed in your record. For the CRUD operations, you must
-        list all columns in
-        your <code>Table</code>, as those use <code>SELECT *</code> under the hood.</p>
-    <p>Finally, let's do some querying! Let's do a basic query for if a world's dimension is enabled</p>
+                    public void createSchema() {
+                        db.execute("""
+                                CREATE TABLE IF NOT EXISTS server_members (
+                                    `uuid` TEXT NOT NULL,
+                                    `name` TEXT NOT NULL,
+                                    `age` INTEGER NOT NULL,
+                                    `activeMember` INTEGER NOT NULL,
+                                    PRIMARY KEY (`uuid`)
+                                )
+                                """);
+                    }
+                }
+            </code-block>
+            <p>Note that the <code>activeMember</code> and <code>uuid</code> columns are not defined as
+                <code>UUID</code> or <code>BOOLEAN</code> types, as might be the case for MySQL or MSSQL. SQLite only
+                supports <a href="https://www.sqlite.org/datatype3.html">a handful of datatypes</a>, so we must be sure
+                to use "real" supported types. The SQLite API automatically handles conversion of these types on read
+                and write. This behavior will be discussed later.
+            </p>
 
-    <code-block lang="java">
-WorldPauseStatus status = db.queryOne( &quot;&quot;&quot;
-        SELECT enabled, expiresAt
-        FROM dimensionpause_worlds
-        WHERE world = ? AND dimension = ?;
-        &quot;&quot;&quot; ,
-        row -&gt; new WorldPauseStatus(
-                row.bool(&quot;enabled&quot;),
-                row.get(&quot;expiresAt&quot;, PaperSqlTypes.INSTANT)
-        ),
-        Param.text(world), Tables.dimension.param(dimension));
-</code-block>
-    <p>Let's break this down. I don't want the entire table returned to me, so I'm not using the built-in CRUD
-        operations.
-        Instead, I'm using the <code>queryOne</code> function. I pass in raw SQL in the first argument, and the second
-        argument is a
-        <code>RowMapper</code>. <code>RowMapper</code>s tell the API how to convert the ResultSet to an object. <code>row</code>
-        refers to <code>Row</code>, a
-        super tiny lightweight wrapper around a ResultSet that tells <code>SqliteDatabase</code> how to convert a column
-        to a Java object.</p>
-    <p>You may have noticed a few things here:</p>
-    <list>
-        <li><p><code>row.get(&quot;expiresAt&quot;, PaperSqlTypes.INSTANT)</code></p></li>
-        <li><p><code>Param.text(world)</code></p></li>
-        <li><p><code>Tables.dimension.param(dimension)</code></p></li>
-    </list>
-    <p>Let's go over these:</p>
-    <list type="decimal">
-        <li><p><code>row.get()</code> is a method that allows you to define a custom type when parsing a
-            <code>ResultSet</code> column for a row.
-            <code>PaperSqlTypes</code> is a custom type in DimensionPause that contains a bunch of static <code>SqlType&lt;T&gt;</code>s.
-            There are already
-            built-in <code>SqlType&lt;T&gt;</code>'s for <code>int</code>, <code>long</code>, <code>double</code>,
-            <code>String</code>, <code>byte[]</code>, <code>UUID</code>, and <code>Boolean</code> (Note that Boolean is
-            an Integer in SQLite, so be sure to set up your <code>boolean</code> columns as <code>int</code>) as well as
-            associated methods for row (
-            <code>row.string</code>, <code>row.i32</code>, <code>row.i64</code>, <code>row.f64</code>, etc.), but you
-            can of course create your own by referring to
-            the <a href="Custom-Data-Types.topic">Custom Data Types</a> documentation.</p></li>
-        <li>
-            <p><code>Param.text(world)</code> is similar to <code>row.get()</code>, except it converts Java objects to
-                SQLite instead of
-                converting SQLite results to Java objects. It's meant to explicitly bind parameters to a concrete type.
-                If <code>Param</code>
-                doesn't contain a type for your data, you can create your own by using <code>SqlType&lt;T&gt;</code> and
-                calling
-                <code>Param.of(SqlType&lt;T&gt;, value)</code>. For example, to
-                <emphasis>write</emphasis>
-                an <code>Instant</code> instead of reading one like in the previous
-                example, you can do <code>Param.of(PaperSqlTypes.INSTANT, expiresAt)</code></p>
-        </li>
-        <li><p><code>Tables.dimension.param(dimension)</code> is the exact equivalent of <code>Param.of(PaperSqlTypes.ENV,
-            dimension)</code>.
-            <code>Table.Column&lt;T&gt;</code> contains a method <code>param(T value)</code> which returns a <code>Param&lt;T&gt;</code>
-            of the column. This is useful for if
-            you already have the type defined, and you don't want to type <code>Param.of</code> everywhere, and is also
-            necessary when using
-            the CRUD operators.</p></li>
-    </list>
+            <tip>
+                <p>SQLite will automatically convert certain types to its underlying supported affinities. For example,
+                    while <code>BOOLEAN</code> is not a real type, SQLite will accept it and convert it to a
+                    <code>NUMERIC</code> affinity instead.
+                </p>
+            </tip>
+            <p>
+                Once the method is created, you will need to call it to actually initialize your database. The
+                recommended way to do this is by injecting your repository into a lifecycle class and call the method
+                during <code>onEnable()</code>. Ultimately, how you do this is up to you.
+            </p>
+        </chapter>
+    </chapter>
+    <chapter id="inserting-querying-data" title="Inserting &amp; Querying Data">
+        <p>By this point, you should have your database created, and it should contain a single table,
+            <code>server_members</code>. Now, let's go ahead and insert some data!
+        </p>
+        <chapter id="inserting-data" title="Insert a New Record">
+            <p>To insert a new record, we will call the <code>execute()</code> method just like we did earlier when
+                creating our database schema. However, this time we will provide some additional arguments:</p>
+            <code-block lang="java" noinject="true">
+                db.execute("""
+                    INSERT INTO server_members (uuid, name, age, activeMember)
+                    VALUES (?, ?, ?, ?)
+                """,
+                Param.uuid(new UUID()),
+                Param.text("TerrorByte"),
+                Param.age(27),
+                Param.bool(true));
+            </code-block>
+            <p>
+                In the above example, we have written a standard SQL query that you may see when using <code>PreparedStatement</code>.
+                However, one major difference is the presence of all of those <code>Param</code> methods.
+            </p>
+            <p>
+                <code>Param</code> is a record provided by the SQLite API that contains methods for binding Java types
+                to SQLite types. When you provide a <code>Param</code> to the <code>execute()</code> method, the SQLite
+                API will convert the type to the appropriate SQLite type and replace the <code>?</code> placeholders
+                with the converted values.
+            </p>
+            <p><code>Param</code> contains several methods for the most common SQLite types. These methods are:</p>
+            <deflist>
+                <def id="i32">
+                    <title><code>i32(Integer v)</code></title>
+                    <p>Converts a Java <code>Integer</code> to a SQLite <code>INTEGER</code>.</p>
+                </def>
+                <def id="i64">
+                    <title><code>i64(Long v)</code></title>
+                    <p>Converts a Java <code>Long</code> to a SQLite <code>BIGINT</code>.</p>
+                    <tip><code>BIGINT</code> in SQLite is actually an <code>INTEGER</code> under the hood</tip>
+                </def>
+                <def id="f64">
+                    <title><code>f64(Double v)</code></title>
+                    <p>Converts a Java <code>Double</code> to a SQLite <code>DOUBLE</code>.</p>
+                    <tip><code>DOUBLE</code> in SQLite is actually an <code>INTEGER</code> under the hood</tip>
+                </def>
+                <def id="text">
+                    <title><code>text(String v)</code></title>
+                    <p>Converts a Java <code>String</code> to SQLite <code>TEXT</code>.</p>
+                </def>
+                <def id="blob">
+                    <title><code>blob(byte[] v)</code></title>
+                    <p>Converts a Java <code>byte[]</code> to a SQLite <code>BLOB</code>. This method uses raw bytes
+                        as the value to write.</p>
+                </def>
+                <def id="uuid">
+                    <title><code>uuid(UUID v)</code></title>
+                    <p>Converts a Java <code>UUID</code> to SQLite <code>TEXT</code>.</p>
+                    <warning>If the <code>UUID</code> is null, the SQLite API will write null as well. If you use UUID
+                        as your primary key, ensure you never pass a null value.
+                    </warning>
+                </def>
+                <def id="bool">
+                    <title><code>bool(Boolean v)</code></title>
+                    <p>Converts a Java <code>Boolean</code> to a SQLite <code>INTEGER</code>, writing <code>1</code> or
+                        <code>0</code> automatically.</p>
+                </def>
+            </deflist>
+            <note>If a <code>Param</code> for the datatype you want to use doesn't exist, such as <code>Instant</code>,
+                you can create your own. This is discussed in a later guide.
+            </note>
+            <p>
+                The return result of <code>execute()</code> is an <code>int</code> which represents the number of rows
+                affected. You may use this to validate the success or failure of your query.
+            </p>
+        </chapter>
+        <chapter id="querying-data" title="Querying Data">
+            <p>
+                We've successfully inserted data using <code>execute()</code>, so now let's query data! As we know,
+                <code>execute()</code> only returns the number of rows affected, so we cannot use it to query data. So,
+                how do we query data, then? We use <code>query()</code> and <code>queryOne()</code>, of course!
+            </p>
+            <p>
+                For this example, we will use <code>queryOne()</code>, however both methods are the exact same. In fact,
+                <code>queryOne()</code> calls <code>query()</code> under the hood. The difference is, after it receives
+                the result, it calls <code>List#getFirst()</code> to return the first result. Be sure, if you're using
+                <code>queryOne()</code>, that you actually filter your data to return only one result.
+            </p>
+            <p>
+                Let's query our database for the player named "TerrorByte" that we inserted a moment ago:
+            </p>
+            <code-block lang="java" noinject="true">
+                ServerMember member = db.queryOne("""
+                    SELECT *
+                    FROM server_members
+                    WHERE name = ?;
+                """,
+                row -> new ServerMember(
+                    row.uuid("uuid"),
+                    row.string("name"),
+                    row.i32("age"),
+                    row.bool("activeMember"),
+                ),
+                Param.text("TerrorByte"));
+            </code-block>
+            <p>
+                The <code>query()</code> and <code>queryOne()</code> methods both take in at minimum two arguments. The
+                first is raw SQL, just like you're used to writing. The second is something called a
+                <code>RowMapper</code>. A <code>RowMapper</code> is a function that provides you with a <code>Row</code>,
+                a lightweight wrapper around a <code>ResultSet</code>. Whatever the return type of the
+                <code>RowMapper</code> is the return type of the query method.
+            </p>
+            <tip>
+                <p>If you are using <code>query()</code> instead of <code>queryOne()</code>, the return type is <code>List&lt;T&gt;</code>,
+                    where <code>T</code> is the type the <code>RowMapper</code> returns.
+                </p>
+            </tip>
+            <p>If <code>Param</code> is for <b>writing data</b>, then <code>Row</code> is for <b>reading data</b>.
+                The SQLite API will execute the query, mapping any parameters you provide accordingly, and then wraps
+                each result in a <code>Row</code> before sending them through the <code>RowMapper</code> lambda you
+                provide. This allows you to call the <code>Row</code> methods to convert SQLite data back into Java
+                primitives.</p>
+            <p>In our example, we are creating a new <code>ServerMember</code> record, and for each argument we are
+                calling the appropriate method for the type. Each method requires the column name which contains the
+                data to convert. The methods in <code>Row</code> are the exact same as in <code>Param</code>, they just
+                work backwards as previously stated.</p>
+            <note>Just like with <code>Param</code>, if a <code>Row</code> for the datatype you want to use doesn't
+                exist, you can create your own. This is discussed in a later guide.
+            </note>
+        </chapter>
+        <chapter id="transactions" title="Using Transactions">
+            <p>Data integrity is an important aspect of working with databases. To ensure data is updated in an
+                "all-or-nothing" manner, you man use <b>transactions</b>.</p>
+            <warning>Transactions heavily affect query caching. If you wish to use transactions, first reference the <a
+                    href="Advanced-Topics.topic" anchor="transaction-cache-invalidation">Transaction Cache
+                Invalidation</a> section in the Advanced Topics guide.
+            </warning>
+            <p>To use transactions, call the <code>transaction()</code> method and provide it one or more queries to
+                execute. Work can only be an <code>execute()</code>, <code>query()</code>, or <code>queryOne()</code>
+                method. Transactions do not support Convenience Methods (discussed in a later guide).</p>
+            <code-block lang="java" noinject="true">
+                db.transaction(tx -> {
+                    UUID uuid = new UUID();
+                    tx.execute("""
+                        INSERT INTO server_members (uuid, name, age, activeMember)
+                        VALUES (?, ?, ?, ?)
+                    """,
+                    Param.uuid(uuid),
+                    Param.text("TerrorByte"),
+                    Param.age(27),
+                    Param.bool(true));
 
+                    return new ServerMember(uuid, "TerrorByte", 27, true);
+                });
+            </code-block>
+            <p>The <code>transaction</code> method takes a lambda which represents the entire transaction. Under the
+                hood, the SQLite API temporarily disables auto-commit and executes the transaction statements. If the
+                statements succeed, the transaction is committed. If any of the statements fail, the transaction is
+                rolled back.</p>
+            <p>The lambda <b>must</b> return a value, even if that value is null. The return value of the
+                lambda is the return value of the <code>transaction</code> method. Because the return value is whatever
+                the developer defines, transactions can be very beneficial depending on how they're used.</p>
+            <tip>Many <code>executes()</code> and <code>query()</code>/<code>queryOne()</code> methods can be called in
+                a single transaction. The entire transaction will not be committed unless every method succeeds. This
+                means if even one method fails, no data will be updated and your database's data integrity will be kept
+                in-tact.
+            </tip>
+        </chapter>
+    </chapter>
+    <chapter id="going-further" title="Going Further">
+        <p>If you do not want to type raw SQL, the SQLite API provides some convenience methods to use, which rely on a
+            new kind of object called a <code>Table</code>. Check out the <a href="CRUD-Operations.topic">Convenience
+                Methods</a> guide to learn more about these methods.</p>
+    </chapter>
 </topic>

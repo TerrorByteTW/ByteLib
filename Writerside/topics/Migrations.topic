@@ -7,6 +7,7 @@
     <title>
         Migrations
     </title>
+    <secondary-label ref="wip"/>
     <p>The SQLite API has built-in support for database migrations. Migrations don't happen automatically, but the API
         provides
         methods for doing so, and it is extremely simple to wire this up.</p>
@@ -16,67 +17,74 @@
         <code-block lang="java">
             List&lt;MigrationStep&gt; steps = List.of(
                     new MigrationStep(1, tx -&gt; {
-                        tx.execute( &quot;&quot;&quot;
+                        tx.execute(&quot;&quot;&quot;
                             CREATE TABLE IF NOT EXISTS regions (
                                 id INTEGER PRIMARY KEY,
                                 name TEXT NOT NULL
                             );
-                        &quot;&quot;&quot; );
+                        &quot;&quot;&quot;);
                     }),
                     new MigrationStep(2, tx -&gt; {
-                        tx.execute( &quot;&quot;&quot;
+                        tx.execute(&quot;&quot;&quot;
                             CREATE VIRTUAL TABLE IF NOT EXISTS region_index
                             USING rtree(id, minX, maxX, minZ, maxZ);
-                        &quot;&quot;&quot; );
+                        &quot;&quot;&quot;);
                     })
             );
         </code-block>
         <p>This migration on version 1 would create a regions table, and on version 2 would create a regions index using
-            <code>rtree</code>.
-            Once you have this list of <code>MigrationStep</code>s created, initialize a
+            <code>rtree</code>.</p>
+    </chapter>
+    <chapter title="Running Migrations" id="running-migrations">
+        <p>
+            Once you have this list of <code>MigrationStep</code> objects created, initialize a
             <code>UserVersionMigrator</code> and call its <code>migrate</code> method,
-            providing your instance of <code>SqliteDatabase</code> as its sole parameter</p>
+            providing your instance of <code>SqliteDatabase</code> as its sole parameter.
+        </p>
         <code-block lang="java" noinject="true">
-            new UserVersionMigrator(&quot;anchor_table&quot;,steps).migrate(db);
+            new UserVersionMigrator(&quot;anchor_table&quot;, steps).migrate(db);
         </code-block>
-        <p><code>UserVersionMigrator</code> does not use dependency injection, so you should instantiate it with <code>new</code>.
-        </p>
-        <p>The migrator will automatically look at your DB's version and run the migrations that need to be run. The
-            version is
-            stored in the <code>user_version</code> pragma, so it is recommended not to manually change this value
-            <emphasis>ever</emphasis>
-            .
-        </p>
-        <p>To prevent the migrator from attempting to run migrations on a brand new DB, it requires an &quot;anchor
-            table&quot; to look up.
-            The anchor table is just a table that should exist in the database. If it doesn't exist (i.e., the database
-            has never
-            been created), then migrations are skipped.</p>
         <tip>
-            <p>Because migrations are skipped if an anchor table doesn't exist (By design), you should create your DB
-                schema
-                <control>AFTER</control>
-                you call the <code>UserVersionMigrator</code>. Creating the schema and then calling the migrator may
-                cause the migrator
-                to run migrations on tables that don't need it.
+            <code>UserVersionMigrator</code> does not use dependency injection, so you must instantiate it with
+            <code>new</code>.
+        </tip>
+        <p>
+            The migrator will automatically look at your DB's version and run the migrations that need to be run. The
+            version is stored in the <code>user_version</code> pragma, so developers should <i>never</i> change this
+            value manually.
+        </p>
+        <p>
+            To prevent the migrator from attempting to run migrations on a brand new DB, it requires an &quot;anchor
+            table&quot;. The anchor table is just a table that <i>should</i> exist in the database. If it doesn't exist,
+            then it's assumed the database is being initialized for the first time and migrations are skipped.</p>
+        <tip>
+            <p>
+                Because migrations are skipped if an anchor table doesn't exist (By design), you should create your DB
+                schema <b>AFTER</b> you call the <code>UserVersionMigrator</code>. Creating the schema and then calling
+                the migrator may cause the migrator to run migrations on tables that don't need it.
             </p>
-            <p>There are two design patterns you can choose here:</p>
+            <p>
+                There are two design patterns you can choose here:
+            </p>
             <list type="decimal">
-                <li><p>Create a base schema for the first version of your plugin. Create migrations that you expect to
-                    be run even if the
-                    plugin is being run for the first time. Doing this means you can never touch your base schema ever
-                    again, and all
-                    changes to the DB must be done via migrations. As well, first-time setup is done primarily through
-                    migrations and
-                    not your schema.</p></li>
-                <li><p>Have a base schema that is always the &quot;most recent&quot; schema, so new databases are
-                    created correctly the first time.
-                    Create migrations that are only meant for existing databases. Create schema only after migrations
-                    are called that
-                    way it doesn't attempt to migrate them the first time.</p></li>
+                <li>
+                    <p>
+                        Create a base schema for the first version of your plugin. Create migrations that you expect to
+                        be run even if the plugin is being run for the first time. Doing this means you can never touch
+                        your base schema ever again, and all changes to the DB must be done via migrations. As well,
+                        first-time setup is done primarily through migrations and not your schema.
+                    </p>
+                </li>
+                <li>
+                    <p>
+                        Have a base schema that is always the &quot;most recent&quot; schema, so new databases are
+                        created correctly the first time. Create migrations that are only meant for existing databases.
+                        Create schema only after migrations are called that way it doesn't attempt to migrate them the
+                        first time.
+                    </p>
+                </li>
             </list>
-            <p>TerrorByteTW plugins follow the 2nd design pattern, but you can choose whatever you want.</p>
+            <p>TerrorByteTW plugins follow the second design pattern, but you can choose whatever you want.</p>
         </tip>
     </chapter>
-
 </topic>

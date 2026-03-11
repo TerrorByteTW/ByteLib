@@ -7,36 +7,53 @@
     <title>
         Configuring SQLite API
     </title>
-    <p><code>SqliteModule</code> can be configured with either:</p>
-    <list>
-        <li><p>a fixed <code>SqliteConfig</code> instance</p></li>
-        <li><p>a <code>Function&lt;BytePluginConfig, SqliteConfig&gt;</code> factory</p></li>
-    </list>
+    <p><code>SqliteModule</code> requires at least one argument, but optionally takes two:</p>
+    <deflist id="sqlitemodule-arguments">
+        <def title="fileName" id="db-file-name">
+            <p>
+                The <code>String fileName</code> argument tells the SQLite API what the SQLite DB should be named when
+                it's
+                written to disk. The SQLite API automatically creates this in your plugin's data folder, and should
+                include the <code>.db</code> file extension.
+            </p>
+        </def>
+        <def title="config" id="sqlite-config">
+            <p>
+                The <code>SqliteConfig config</code> argument tells Java's SQLite Driver how to configure and use the
+                DB. It also
+                includes configuration for the built-in <code>SqliteCache</code>, which we'll read more about later.
+            </p>
+            <tip><p>An alternate constructor exists which replaces the <code>SqliteConfig config</code> argument with
+                <code>Function
+                    &lt;BytePluginConfig, SqliteConfig&gt; configFactory</code>.
+                This allows you to define a function that can access your <code>BytePluginConfig</code> to configure
+                SQLite via a configuration file.</p>
+                <p>An example of using this is if you want to allow server administrators to tweak DB cache or other
+                    behaviors.</p>
+            </tip>
+        </def>
+    </deflist>
     <chapter title="Basic usage" id="basic-usage">
-<code-block lang="java" noinject="true">
-new SqliteModule(&quot;data.db&quot;,SqliteConfig.defaults());
-</code-block>
         <code-block lang="java" noinject="true">
-new SqliteModule(&quot;data.db&quot;,byteConfig -&gt; {
-SqliteConfig base = SqliteConfig.defaults();
-    return new
-
-SqliteConfig(
-            true,
+            // An example providing a concrete configuration
+            new SqliteModule(&quot;data.db&quot;, SqliteConfig.defaults());
+        </code-block>
+        <code-block lang="java" noinject="true">
+            // An example providing a lambda which allows configuration of the module at runtime.
+            new SqliteModule(&quot;data.db&quot;, byteConfig -&gt; {
+                SqliteConfig base = SqliteConfig.defaults();
+                return new SqliteConfig(
+                    true,
                     &quot;WAL&quot;,
                     &quot;NORMAL&quot;,
                     5000,
-            java.time.Duration.ofMillis(20),
-
-SqliteConfig.MainThreadPolicy.WARN,
-SqliteConfig.TimeoutBehavior.THROW,
-        java.time.Duration.
-
-ofMillis(10),
-            base.
-
-cache()
-    );
+                    // Configure mainThreadTimeout timeout via config
+                    java.time.Duration.ofMillis(byteConfig.config().getInt("main-thread-timeout")),
+                    SqliteConfig.MainThreadPolicy.WARN,
+                    SqliteConfig.TimeoutBehavior.THROW,
+                    java.time.Duration.ofMillis(10),
+                    base.cache()
+                );
             });
 </code-block>
     </chapter>
@@ -44,179 +61,183 @@ cache()
         <title>
             <code>SqliteConfig</code> options
         </title>
-        <chapter id="foreignkeys-boolean">
-            <title>
-                <code>foreignKeys</code> (<code>boolean</code>)
-            </title>
-            <list>
-                <li><p>Controls <code>PRAGMA foreign_keys=ON</code>.</p></li>
-                <li><p>Values: <code>true</code>, <code>false</code>.</p></li>
-                <li><p>Default: <code>true</code>.</p></li>
-            </list>
-        </chapter>
-        <chapter id="journalmode-string">
-            <title>
-                <code>journalMode</code> (<code>String</code>)
-            </title>
-            <list>
-                <li><p>Passed directly to <code>PRAGMA journal_mode=&lt;value&gt;</code>.</p></li>
-                <li><p>The library does not validate this value.</p></li>
-                <li><p>Common SQLite values: <code>WAL</code>, <code>DELETE</code>, <code>TRUNCATE</code>,
-                    <code>PERSIST</code>, <code>MEMORY</code>, <code>OFF</code>.</p></li>
-                <li><p>Default: <code>&quot;WAL&quot;</code>.</p></li>
-            </list>
-        </chapter>
-        <chapter id="synchronous-string">
-            <title>
-                <code>synchronous</code> (<code>String</code>)
-            </title>
-            <list>
-                <li><p>Passed directly to <code>PRAGMA synchronous=&lt;value&gt;</code>.</p></li>
-                <li><p>The library does not validate this value.</p></li>
-                <li><p>Common SQLite values: <code>OFF</code>, <code>NORMAL</code>, <code>FULL</code>,
-                    <code>EXTRA</code> (or numeric <code>0</code> - <code>3</code>).</p></li>
-                <li><p>Default: <code>&quot;NORMAL&quot;</code>.</p></li>
-            </list>
-        </chapter>
-        <chapter id="busytimeoutms-int">
-            <title>
-                <code>busyTimeoutMs</code> (<code>int</code>)
-            </title>
-            <list>
-                <li><p>Passed to <code>PRAGMA busy_timeout=&lt;value&gt;</code>.</p></li>
-                <li><p>Unit: milliseconds.</p></li>
-                <li><p>Default: <code>5000</code>.</p></li>
-            </list>
-        </chapter>
-        <chapter id="mainthreadtimeout-duration">
-            <title>
-                <code>mainThreadTimeout</code> (<code>Duration</code>)
-            </title>
-            <list>
-                <li><p>Timeout applied to blocking DB calls made on the Bukkit main thread.</p></li>
-                <li><p><code>null</code>, zero, or negative disables timeout behavior for main-thread calls.</p></li>
-                <li><p>Default: <code>Duration.ofMillis(20)</code>.</p></li>
-            </list>
-        </chapter>
-        <chapter id="mainthreadpolicy-mainthreadpolicy">
-            <title>
-                <code>mainThreadPolicy</code> (<code>MainThreadPolicy</code>)
-            </title>
-            <list>
-                <li><p>Controls what happens when DB calls are made on the main thread.</p></li>
-                <li><p>Values:</p>
-                    <list>
-                        <li><p><code>ALLOW</code>: permit silently</p></li>
-                        <li><p><code>WARN</code>: permit and allow slow-call warnings</p></li>
-                        <li><p><code>DISALLOW</code>: throw <code>DbMainThreadDisallowedException</code></p></li>
-                    </list>
-                </li>
-                <li><p>Default: <code>WARN</code>.</p></li>
-            </list>
-        </chapter>
-        <chapter id="timeoutbehavior-timeoutbehavior">
-            <title>
-                <code>timeoutBehavior</code> (<code>TimeoutBehavior</code>)
-            </title>
-            <list>
-                <li><p>Controls behavior when a main-thread call exceeds <code>mainThreadTimeout</code>.</p></li>
-                <li><p>Values:</p>
-                    <list>
-                        <li><p><code>FAIL_OPEN</code>: return fallback result (<code>null</code>; query wrappers convert
-                            to empty list)</p></li>
-                        <li><p><code>FAIL_CLOSED</code>: throw <code>DbTimeoutException</code></p></li>
-                        <li><p><code>THROW</code>: throw <code>DbTimeoutException</code></p></li>
-                    </list>
-                </li>
-                <li><p>Default: <code>THROW</code>.</p></li>
-            </list>
-        </chapter>
-        <chapter id="slowquerywarnthreshold-duration">
-            <title>
-                <code>slowQueryWarnThreshold</code> (<code>Duration</code>)
-            </title>
-            <list>
-                <li><p>Used only when <code>mainThreadPolicy == WARN</code>.</p></li>
-                <li><p>If the elapsed main-thread DB call time is greater than or equal to this threshold, a warning is
-                    logged.</p></li>
-                <li><p><code>null</code>, zero, or negative disables slow-query warning logs.</p></li>
-                <li><p>Default: <code>Duration.ofMillis(10)</code>.</p></li>
-            </list>
-        </chapter>
-        <chapter id="cache-sqliteconfig-cacheconfig">
-            <title>
-                <code>cache</code> (<code>SqliteConfig.CacheConfig</code>)
-            </title>
-            <list>
-                <li><p>Query result cache settings.</p></li>
-                <li><p>Default: <code>SqliteConfig.CacheConfig.defaults()</code>.</p></li>
-            </list>
-        </chapter>
+
+        <deflist>
+
+            <def id="foreignkeys-boolean">
+                <title><code>foreignKeys</code> (<code>boolean</code>)</title>
+                <list>
+                    <li><p>Controls <code>PRAGMA foreign_keys=ON</code>.</p></li>
+                    <li><p>Values: <code>true</code>, <code>false</code>.</p></li>
+                    <li><p>Default: <code>true</code>.</p></li>
+                </list>
+            </def>
+
+            <def id="journalmode-string">
+                <title><code>journalMode</code> (<code>String</code>)</title>
+                <list>
+                    <li><p>Passed directly to <code>PRAGMA journal_mode=&lt;value&gt;</code>.</p></li>
+                    <li><p>The library does not validate this value.</p></li>
+                    <li><p>Common SQLite values: <code>WAL</code>, <code>DELETE</code>, <code>TRUNCATE</code>,
+                        <code>PERSIST</code>, <code>MEMORY</code>, <code>OFF</code>.</p></li>
+                    <li><p>Default: <code>"WAL"</code>.</p></li>
+                </list>
+            </def>
+
+            <def id="synchronous-string">
+                <title><code>synchronous</code> (<code>String</code>)</title>
+                <list>
+                    <li><p>Passed directly to <code>PRAGMA synchronous=&lt;value&gt;</code>.</p></li>
+                    <li><p>The library does not validate this value.</p></li>
+                    <li><p>Common SQLite values: <code>OFF</code>, <code>NORMAL</code>, <code>FULL</code>,
+                        <code>EXTRA</code> (or numeric <code>0</code> - <code>3</code>).</p></li>
+                    <li><p>Default: <code>"NORMAL"</code>.</p></li>
+                </list>
+            </def>
+
+            <def id="busytimeoutms-int">
+                <title><code>busyTimeoutMs</code> (<code>int</code>)</title>
+                <list>
+                    <li><p>Passed to <code>PRAGMA busy_timeout=&lt;value&gt;</code>.</p></li>
+                    <li><p>Unit: milliseconds.</p></li>
+                    <li><p>Default: <code>5000</code>.</p></li>
+                </list>
+            </def>
+
+            <def id="mainthreadtimeout-duration">
+                <title><code>mainThreadTimeout</code> (<code>Duration</code>)</title>
+                <list>
+                    <li><p>Timeout applied to blocking DB calls made on the Bukkit main thread.</p></li>
+                    <li><p><code>null</code>, zero, or negative disables timeout behavior for main-thread calls.</p>
+                    </li>
+                    <li><p>Default: <code>Duration.ofMillis(20)</code>.</p></li>
+                </list>
+            </def>
+
+            <def id="mainthreadpolicy-mainthreadpolicy">
+                <title><code>mainThreadPolicy</code> (<code>MainThreadPolicy</code>)</title>
+                <list>
+                    <li><p>Controls what happens when DB calls are made on the main thread.</p></li>
+                    <li>
+                        <p>Values:</p>
+                        <list>
+                            <li><p><code>ALLOW</code>: permit silently</p></li>
+                            <li><p><code>WARN</code>: permit and allow slow-call warnings</p></li>
+                            <li><p><code>DISALLOW</code>: throw <code>DbMainThreadDisallowedException</code></p></li>
+                        </list>
+                    </li>
+                    <li><p>Default: <code>WARN</code>.</p></li>
+                </list>
+            </def>
+
+            <def id="timeoutbehavior-timeoutbehavior">
+                <title><code>timeoutBehavior</code> (<code>TimeoutBehavior</code>)</title>
+                <list>
+                    <li><p>Controls behavior when a main-thread call exceeds <code>mainThreadTimeout</code>.</p></li>
+                    <li>
+                        <p>Values:</p>
+                        <list>
+                            <li><p><code>FAIL_OPEN</code>: return fallback result (<code>null</code>; query wrappers
+                                convert to empty list)</p></li>
+                            <li><p><code>FAIL_CLOSED</code>: throw <code>DbTimeoutException</code></p></li>
+                            <li><p><code>THROW</code>: throw <code>DbTimeoutException</code></p></li>
+                        </list>
+                    </li>
+                    <li><p>Default: <code>THROW</code>.</p></li>
+                </list>
+            </def>
+
+            <def id="slowquerywarnthreshold-duration">
+                <title><code>slowQueryWarnThreshold</code> (<code>Duration</code>)</title>
+                <list>
+                    <li><p>Used only when <code>mainThreadPolicy == WARN</code>.</p></li>
+                    <li><p>If the elapsed main-thread DB call time is greater than or equal to this threshold, a warning
+                        is logged.</p></li>
+                    <li><p><code>null</code>, zero, or negative disables slow-query warning logs.</p></li>
+                    <li><p>Default: <code>Duration.ofMillis(10)</code>.</p></li>
+                </list>
+            </def>
+
+            <def id="cache-sqliteconfig-cacheconfig">
+                <title><code>cache</code> (<code>SqliteConfig.CacheConfig</code>)</title>
+                <list>
+                    <li><p>Query result cache settings.</p></li>
+                    <li><p>Default: <code>SqliteConfig.CacheConfig.defaults()</code>.</p></li>
+                </list>
+            </def>
+
+        </deflist>
     </chapter>
     <chapter id="cacheconfig-options">
         <title>
             <code>CacheConfig</code> options
         </title>
-        <chapter id="ttl-duration">
-            <title>
-                <code>ttl</code> (<code>Duration</code>)
-            </title>
-            <list>
-                <li><p>Time-to-live for cache entries.</p></li>
-                <li><p><code>null</code>, zero, or negative means entries do not expire by TTL.</p></li>
-                <li><p>Default: <code>Duration.ofSeconds(30)</code>.</p></li>
-            </list>
-        </chapter>
-        <chapter id="refreshafter-duration">
-            <title>
-                <code>refreshAfter</code> (<code>Duration</code>)
-            </title>
-            <list>
-                <li><p>Age after which reads may trigger background refresh.</p></li>
-                <li><p><code>null</code>, zero, or negative disables refresh-after behavior.</p></li>
-                <li><p>Default: <code>Duration.ofSeconds(10)</code>.</p></li>
-            </list>
-        </chapter>
-        <chapter id="servestalewhilerefreshing-boolean">
-            <title>
-                <code>serveStaleWhileRefreshing</code> (<code>boolean</code>)
-            </title>
-            <list>
-                <li><p>If <code>true</code>, stale entries can be served while a refresh is running.</p></li>
-                <li><p>Values: <code>true</code>, <code>false</code>.</p></li>
-                <li><p>Default: <code>true</code>.</p></li>
-            </list>
-        </chapter>
-        <chapter id="maxsize-int">
-            <title>
-                <code>maxSize</code> (<code>int</code>)
-            </title>
-            <list>
-                <li><p>Maximum number of cached query keys.</p></li>
-                <li><p>Special values:</p>
-                    <list>
-                        <li><p><code>0</code>: disable cache</p></li>
-                        <li><p><code>-1</code>: unlimited cache size</p></li>
-                        <li><p><code>&lt; -1</code>: disable cache</p></li>
-                    </list>
-                </li>
-                <li><p>Default: <code>50000</code>.</p></li>
-            </list>
-        </chapter>
+        <deflist>
+            <def id="cache-ttl">
+                <title>
+                    <code>ttl</code> (<code>Duration</code>)
+                </title>
+                <list>
+                    <li><p>Time-to-live for cache entries.</p></li>
+                    <li><p><code>null</code>, zero, or negative means entries do not expire by TTL.</p></li>
+                    <li><p>Default: <code>Duration.ofSeconds(30)</code>.</p></li>
+                </list>
+            </def>
+            <def id="refreshafter-duration">
+                <title>
+                    <code>refreshAfter</code> (<code>Duration</code>)
+                </title>
+                <list>
+                    <li><p>Age after which reads may trigger background refresh.</p></li>
+                    <li><p><code>null</code>, zero, or negative disables refresh-after behavior.</p></li>
+                    <li><p>Default: <code>Duration.ofSeconds(10)</code>.</p></li>
+                </list>
+            </def>
+            <def id="servestalewhilerefreshing-boolean">
+                <title>
+                    <code>serveStaleWhileRefreshing</code> (<code>boolean</code>)
+                </title>
+                <list>
+                    <li><p>If <code>true</code>, stale entries can be served while a refresh is running.</p></li>
+                    <li><p>Values: <code>true</code>, <code>false</code>.</p></li>
+                    <li><p>Default: <code>true</code>.</p></li>
+                </list>
+            </def>
+            <def id="maxsize-int">
+                <title>
+                    <code>maxSize</code> (<code>int</code>)
+                </title>
+                <list>
+                    <li><p>Maximum number of cached query keys.</p></li>
+                    <li><p>Special values:</p>
+                        <list>
+                            <li><p><code>0</code>: disable cache</p></li>
+                            <li><p><code>-1</code>: unlimited cache size</p></li>
+                            <li><p><code>&lt; -1</code>: disable cache</p></li>
+                        </list>
+                    </li>
+                    <li><p>Default: <code>50000</code>.</p></li>
+                </list>
+            </def>
+        </deflist>
     </chapter>
     <chapter title="Defaults snapshot" id="defaults-snapshot">
-<code-block lang="java" noinject="true">
-SqliteConfig.defaults();
-// foreignKeys=true
-// journalMode=&quot;WAL&quot;
-// synchronous=&quot;NORMAL&quot;
-// busyTimeoutMs=5000
-// mainThreadTimeout=Duration.ofMillis(20)
-// mainThreadPolicy=MainThreadPolicy.WARN
-// timeoutBehavior=TimeoutBehavior.THROW
-// slowQueryWarnThreshold=Duration.ofMillis(10)
-// cache=CacheConfig.defaults()
-</code-block>
+        <code-block lang="java" noinject="true">
+            SqliteConfig.defaults();
+            // foreignKeys=true
+            // journalMode=&quot;WAL&quot;
+            // synchronous=&quot;NORMAL&quot;
+            // busyTimeoutMs=5000
+            // mainThreadTimeout=Duration.ofMillis(20)
+            // mainThreadPolicy=MainThreadPolicy.WARN
+            // timeoutBehavior=TimeoutBehavior.THROW
+            // slowQueryWarnThreshold=Duration.ofMillis(10)
+            // cache=CacheConfig.defaults()
+            CacheConfig.defaults();
+            // ttl=Duration.ofSeconds(30)
+            // refreshAfter=Duration.ofSeconds(10)
+            // serveStaleWhileRefreshing=true
+            // maxSize=50_000
+        </code-block>
     </chapter>
-
 </topic>

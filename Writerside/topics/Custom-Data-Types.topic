@@ -7,30 +7,136 @@
     <title>
         Custom Data Types
     </title>
-    <p>If you want to create a custom type, create a variable typed as <code>SqlType&lt;T&gt;</code>, where
-        <code>T</code> is your custom data
-        type, then set it to a new <code>SqlType&lt;&gt;()</code> and implement the <code>bind</code> and
-        <code>read</code> functions.</p>
-    <p>Here is how DimensionPause implements the <code>SqlType</code> for <code>Instant</code>, while supporting
-        nullability as well</p>
-    <code-block lang="java">
-public static final SqlType&lt;Instant&gt; INSTANT = new SqlType&lt;&gt;() {
-    public void bind(PreparedStatement ps, int index, Instant value) throws SQLException {
-        if (value != null) ps.setLong(4, value.toEpochMilli());
-        else ps.setNull(4, Types.BIGINT);
-    }
+    <p>By now we've used <code>Param</code> and <code>Row</code> quite a bit. If you utilized <code>Table</code>, then
+        you also used <code>SqlType</code>
+    </p>
+    <p>
+        However, as your plugin gets more advanced, you may find yourself needing to store data that does not have
+        an equivalent built into the SQLite API. This guide will walk you through creating your own data type.
+    </p>
+    <chapter id="creating-custom-types" title="Defining a Custom Type">
+        <p>
+            A custom type is simply an implementation of <code>SqlType</code>. You may store these implementations
+            anywhere, but it's recommended to keep them in their own class for modularity's sake. Just like
+            <code>Table</code>, it's also recommended to make these objects static, as they do not store state and are
+            not instantiated.
+        </p>
+        <p>To create a custom <code>SqlType</code>, first decide what type you want to implement. For this example,
+            we'll create a custom type that handles <code>Instant</code> objects. Let's go ahead and create the entire
+            type now, then break it down piece by piece. Here is the custom type for an <code>Instant</code>:</p>
+        <code-block lang="java">
+            public class CustomTypes {
+                public static final SqlType&lt;Instant&gt; INSTANT = new SqlType&lt;&gt;() {
+                    public void bind(PreparedStatement ps, int index, Instant value) throws SQLException {
+                        if (value != null) ps.setLong(index, value.toEpochMilli());
+                        else ps.setNull(index, Types.BIGINT);
+                    }
 
-    public @Nullable Instant read(ResultSet rs, String column) throws SQLException {
-        Object raw = rs.getObject(column);
-        Long expiresAtMs = (raw instanceof Number n) ? n.longValue() : null;
-        return expiresAtMs != null ? Instant.ofEpochMilli(expiresAtMs) : null;
-    }
-};
-</code-block>
-    <p>Since SQLite has no idea what an <code>Instant</code> is, we use <code>BIGINT</code> as the backing data type.
-        Think of <code>bind()</code> as a
-        serializer and <code>read()</code> as a deserializer: <code>bind()</code> writes a <code>long</code> to the DB,
-        and <code>read()</code> converts it back to an
-        <code>Instant</code>, or returns null if the column is null.</p>
-
+                    public @Nullable Instant read(ResultSet rs, String column) throws SQLException {
+                        Object raw = rs.getObject(column);
+                        Long expiresAtMs = (raw instanceof Number n) ? n.longValue() : null;
+                        return expiresAtMs != null ? Instant.ofEpochMilli(expiresAtMs) : null;
+                    }
+                };
+            }
+        </code-block>
+        <chapter id="breaking-it-down" title="Breaking It Down">
+            <p>A <code>SqlType</code> must contain two methods:</p>
+            <list>
+                <li><code>public void bind(PreparedStatement ps, int index, Instant value) throws SQLException;</code>
+                </li>
+                <li><code>public T read(ResultSet rs, String column) throws SQLException;</code></li>
+            </list>
+            <deflist>
+                <def id="bind">
+                    <title><code>bind()</code></title>
+                    <p>The <code>bind()</code> method is the method that <code>Param</code> calls under the hood, and is
+                        responsible for converting the Java object's value to the underlying SQLite data type and
+                        binding it to the placeholder at a given index.</p>
+                </def>
+                <def id="read">
+                    <title><code>read()</code></title>
+                    <p>The <code>read()</code> method is the method that <code>Row</code> calls under the hood, and it
+                        does the
+                        exact opposite of <code>bind()</code>. It is responsible for reading the value of the object in
+                        the
+                        <code>ResultSet</code> in the given column, and converting it to the respective Java object.</p>
+                    <tip>This method is not normally annotated with <code>@Nullable</code>. The above
+                        <code>SqlType</code> has been written to support nullability, and therefore its methods have
+                        been written to support null values. This is another benefit of using custom types: being able
+                        to support fallback values.
+                    </tip>
+                </def>
+            </deflist>
+            <note>It's important that, when creating your schema in accordance with <a href="Utilizing-SQLite-API.topic"
+                                                                                       anchor="creating-schema">Creating
+                Database Schema</a> that you create your schema with your custom type's <i>backing type</i> in mind.
+                Otherwise, you will not be able to insert or query records from your database.
+            </note>
+        </chapter>
+    </chapter>
+    <chapter id="using-custom-types" title="Using a Custom Type">
+        <p>Now that we have our custom types created, we can use them wherever we need. Custom data types are supported
+            with <code>Row</code>, <code>Param</code>, and <code>Table.Column&lt;T&gt;</code>
+        </p>
+        <tabs>
+            <tab id="custom-datatype-row" title="Usage with Rows">
+                <p>Use your custom data type in rows when you want to query data and convert a column to your custom
+                    type. A
+                    special helper method, <code>Row#get()</code> exists specifically for this purpose.</p>
+                <code-block lang="java" noinject="true">
+                    Instant instant = db.queryOne("""
+                            SELECT updatedAt
+                            FROM some_table
+                            ORDER BY updatedAt DESC;
+                        """,
+                        row -> row.get("updatedAt", CustomTypes.INSTANT));
+                </code-block>
+                <p>The SQLite API will handle calling <code>CustomTypes.INSTANT.read()</code> when it converts the
+                    column to
+                    an object</p>
+            </tab>
+            <tab id="custom-datatype-param" title="Usage with Params">
+                <p>Use your custom data type in params when you want to query the database by a custom data type. A
+                    special helper method, <code>Param#of()</code> exists to fulfill this use case.</p>
+                <code-block lang="java" noinject="true">
+                    Instant instant = db.queryOne("""
+                            SELECT updatedAt
+                            FROM some_table
+                            WHERE updatedAt &lt; ?
+                            ORDER BY updatedAt DESC;
+                        """,
+                        row -> row.get("updatedAt", CustomTypes.INSTANT),
+                        Param.of(CustomTypes.INSTANT, Instant.now().minus(1, ChronoUnit.DAYS));
+                </code-block>
+                <p>The SQLite API will handle calling <code>CustomTypes.INSTANT.bind()</code> when it converts the value
+                    provided in <code>Param#of()</code> to the respective SQLite datatype.</p>
+            </tab>
+            <tab id="custom-datatype-table" title="Usage with Table Columns">
+                <p>The last way to use a custom type is with Table Columns. This replaces the need to use
+                    <code>Param#of()</code>, but does not replace the need to use <code>Row#get()</code>.</p>
+                <code-block lang="java" noinject="true">
+                    Table SOME_TABLE = Table.of("some_table");
+                    Table.Column&lt;Instant&gt; updatedAt = SOME_TABLE.col("updatedAt", CustomTypes.INSTANT);
+                    Instant instant = db.queryOne("""
+                            SELECT updatedAt
+                            FROM some_table
+                            WHERE updatedAt &lt; ?
+                            ORDER BY updatedAt DESC;
+                        """,
+                        row -> row.get("updatedAt", CustomTypes.INSTANT),
+                        updatedAt.param(Instant.now().minus(1, ChronoUnit.DAYS));
+                </code-block>
+                <p>As previously discussed in the <a href="CRUD-Operations.topic">Convenience Methods</a> guide, the
+                    <code>Table.Column&lt;T&gt;#param()</code>
+                    method will return the correct <code>Param</code> object for the column.
+                </p>
+                <tip>
+                    In a future update, <code>Table.Column&lt;T&gt;</code> will have a <code>row()</code> method which will
+                    return the correct <code>Row</code> object for the column, just like <code>param()</code> does for
+                    <code>Param</code> objects.
+                </tip>
+            </tab>
+        </tabs>
+    </chapter>
 </topic>

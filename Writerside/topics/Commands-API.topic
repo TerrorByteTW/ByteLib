@@ -23,13 +23,10 @@
     </chapter>
     <chapter title="Brigadier vs Commands API" id="brigadier-vs-commands-api" collapsible="true">
         <p>You may be asking yourself: &quot;Why would I use ByteLib's Commands API instead of Brigadier, when they're
-            so similar?&quot; Read
-            the blurb below to understand the benefits or skip down to the Quick Start section to just get started.</p>
+            so similar?&quot; </p>
         <p>The benefit to Commands API is that it provides helpers to reduce boilerplate code that Brigadier typically
-            requires
-            and also provides first class support for Google Guice out of the box. Here's an example of two identical
-            commands, one
-            written with Brigadier and one written with the Commands API:</p>
+            requires and also provides first class support for Google Guice out of the box. Here's an example of two
+            identical commands, one written with Brigadier and one written with the Commands API:</p>
         <compare first-title="Brigadier" second-title="Commands API">
 <code-block lang="java">
 public final class BrigadierCommand {

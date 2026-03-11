@@ -6,11 +6,11 @@ plugins {
     java
     `maven-publish`
     id("com.gradleup.shadow") version "9.2.2"
-    alias(libs.plugins.lombok);
+    alias(libs.plugins.lombok)
 }
 
 project.group = "org.reprogle"
-project.version = "1.1"
+project.version = "1.1.1"
 project.description =
     "A library for wrapping common tasks my plugins do, such as SQLite storage or command creation/registration"
 

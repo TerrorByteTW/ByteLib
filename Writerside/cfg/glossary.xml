@@ -8,4 +8,11 @@
     <term name="loader">
         Part of the Paper Plugin API; responsible for creating the expected, final classpath of your plugin at runtime.
     </term>
+    <term name="repository">
+        A centralized storage location designed to store, manage, and maintain data, digital artifacts, and metadata for
+        specific purposes like analysis, reporting, or long-term preservation.
+    </term>
+    <term name="dto">
+        Data Transfer Object; A lightweight object used for transferring data between layers of an application.
+    </term>
 </terms>

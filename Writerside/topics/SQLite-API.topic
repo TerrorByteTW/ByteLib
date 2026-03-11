@@ -7,12 +7,9 @@
     <title>
         SQLite API
     </title>
-    <secondary-label ref="wip"/>
-    <p>ByteLib comes with an extremely opinionated yet extensible SQLite wrapper, abstracting away so much boilerplate
-        it'd
-        make your head spin! The SQLite API was designed to look and feel like an ORM without taking away the power of
-        raw SQL.
-        All examples in here will be from the <a
-                href="https://github.com/TerrorByteTW/DimensionPause">DimensionPause</a> plugin.</p>
+    <p>The ByteLib SQLite API is an opinionated yet extensible SQLite wrapper that abstracts away much of the
+        boilerplate that comes with using SQLite. It also provides a ton of quality-of-life features.</p>
+    <p>The goal of the SQLite API was to design it in a way that it looks like an ORM but still allows developers to use
+        all the power of raw SQL.</p>
 
 </topic>

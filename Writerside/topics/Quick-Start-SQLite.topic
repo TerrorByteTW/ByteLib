@@ -7,33 +7,33 @@
     <title>
         Set up SQLite Module
     </title>
-    <p>To get started, in your plugin's <a href="Bootstrapping.topic" anchor="bootstrapping-in-detail">wiring class</a>,
+    <p>To get started, in your plugin's <a href="Bootstrapping.topic" anchor="5-wire-guice-together">wiring class</a>,
         add <code>SqliteModule()</code> to your
         <code>modules()</code> function.</p>
 
     <code-block lang="java">
-public final class DimensionPausePlugin extends ByteLibPlugin {
+        public final class DimensionPausePlugin extends ByteLibPlugin {
 
-    @Inject
-    public DimensionPausePlugin(Injector injector, PluginMeta meta, Path dataDir, ComponentLogger logger) {
-        super(injector, meta, dataDir, logger);
-    }
+            @Inject
+            public DimensionPausePlugin(Injector injector, PluginMeta meta, Path dataDir, ComponentLogger logger) {
+                super(injector, meta, dataDir, logger);
+            }
 
-    @SuppressWarnings(&quot;unused&quot;)
-    public static class Wiring implements PluginWiring {
-        @Override
-        public List&lt;Module&gt; modules(PluginMeta meta, Path dataDir, ComponentLogger logger) {
-            return List.of(
-                    new DimensionPauseModule(),
-                    new SqliteModule(&quot;dimensionpause.db&quot;)
-            );
+            @SuppressWarnings(&quot;unused&quot;)
+            public static class Wiring implements PluginWiring {
+                @Override
+                public List&lt;Module&gt; modules(PluginMeta meta, Path dataDir, ComponentLogger logger) {
+                    return List.of(
+                            new DimensionPauseModule(),
+                            new SqliteModule(&quot;dimensionpause.db&quot;)
+                    );
+                }
+            }
         }
-    }
-}
-</code-block>
-    <p><code>new SqliteModule()</code> takes between 1 and 2 parameters. The first is the name of your DB file, and the
-        second is any
-        options you want to provide. The second parameter is a <code>SqliteConfig</code> record. Check
-        the <a href="Configuring-SQLite-API.topic">configuration</a> for more info on this.</p>
+    </code-block>
+    <p>
+        <code>SqliteModule()</code> takes between 1 and 2 parameters which we'll configure in the next topic which
+        covers <a href="Configuring-SQLite-API.topic">configuring the SQLite module</a>.
+    </p>
 
 </topic>

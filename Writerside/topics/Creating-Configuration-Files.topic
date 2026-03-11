@@ -7,8 +7,6 @@
 
     <title>Setting up Config API</title>
 
-    <secondary-label ref="wip"/>
-
     <p>
         The Config API is extremely opinionated. Developers are free to do whatever they want with
         their configuration files,

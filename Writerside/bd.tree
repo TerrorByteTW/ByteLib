@@ -36,5 +36,6 @@
         <toc-element topic="CRUD-Operations.topic"/>
         <toc-element topic="Custom-Data-Types.topic"/>
         <toc-element topic="Migrations.topic"/>
+        <toc-element topic="Advanced-Topics.topic"/>
     </toc-element>
 </instance-profile>

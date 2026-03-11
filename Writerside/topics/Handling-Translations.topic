@@ -6,7 +6,6 @@
        title="Handling Translations">
 
     <title>Handling Translations</title>
-    <secondary-label ref="wip"/>
 
     <p>
         Normally, plugin developers must handle message formatting themselves. While ByteLib
