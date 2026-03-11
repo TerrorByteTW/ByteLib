@@ -259,10 +259,6 @@
         <chapter id="transactions" title="Using Transactions">
             <p>Data integrity is an important aspect of working with databases. To ensure data is updated in an
                 "all-or-nothing" manner, you man use <b>transactions</b>.</p>
-            <warning>Transactions heavily affect query caching. If you wish to use transactions, first reference the <a
-                    href="Advanced-Topics.topic" anchor="transaction-cache-invalidation">Transaction Cache
-                Invalidation</a> section in the Advanced Topics guide.
-            </warning>
             <p>To use transactions, call the <code>transaction()</code> method and provide it one or more queries to
                 execute. Work can only be an <code>execute()</code>, <code>query()</code>, or <code>queryOne()</code>
                 method. Transactions do not support Convenience Methods (discussed in a later guide).</p>

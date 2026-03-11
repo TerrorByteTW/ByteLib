@@ -32,23 +32,23 @@
             Therefore, cache records are evicted after <i>at least</i>, not exactly at, 30 seconds.
         </tip>
     </chapter>
-    <chapter id="transaction-cache-invalidation" title="Cache Invalidation for Transactions">
-        <p>Because query cache is keyed on whole SQL queries and not rows or predicates, a transaction can change any
-            subset of rows in a table, and the cache has no dependency graph that says:</p>
+    <chapter id="on-write-cache-invalidation" title="Cache Invalidation on Write">
+        <p>Because query cache is keyed on whole SQL queries and not rows or predicates, any operation that writes to
+            the database can change any subset of rows in a table, and the cache has no dependency graph that says:</p>
         <list>
             <li>which cached queries read which row</li>
             <li>which <code>WHERE</code> clauses are affected by a given write</li>
             <li>whether aggregates like <code>COUNT(*)</code>, <code>SUM(...)</code>, or joins are now stale</li>
         </list>
-        <p>So, after a transaction is committed to a table or tables, every cached query mentioning that table must be
-            invalidated.</p>
+        <p>So, after a table or tables is written to, <b>every cached query mentioning that table must be
+            invalidated.</b></p>
         <p>For example, let's say each of the below queries is cached:</p>
         <list>
             <li><code>SELECT * FROM MY_TABLE WHERE id = 5</code></li>
             <li><code>SELECT * FROM MY_TABLE WHERE status = 'ACTIVE'</code></li>
             <li><code>SELECT count(*) FROM MY_TABLE</code></li>
         </list>
-        <p>If a transaction updates even just one row in <code>MY_TABLE</code>, without full table-level invalidation,
+        <p>If a query updates even just one row in <code>MY_TABLE</code>, without full table-level invalidation,
             any of those caches might now be wrong, and the cache layer cannot prove which ones are still valid.</p>
     </chapter>
     <chapter id="query-timeouts" title="Query Timeouts">
