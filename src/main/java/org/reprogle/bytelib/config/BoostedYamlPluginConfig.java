@@ -209,6 +209,8 @@ public class BoostedYamlPluginConfig implements BytePluginConfig {
             if (!outFile.exists()) {
                 Files.createDirectories(outFile.toPath().getParent());
                 Files.writeString(outFile.toPath(), "# Created by " + meta.getName() + "\n");
+                Files.writeString(outFile.toPath(), "# Replace this file with your configuration, whatever that may be\n");
+                Files.writeString(outFile.toPath(), "placeholder: true\n");
             }
 
             resource = new java.io.ByteArrayInputStream(new byte[0]);
