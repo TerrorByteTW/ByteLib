@@ -137,10 +137,11 @@ public class BoostedYamlPluginConfig implements BytePluginConfig {
             Files.createDirectories(spec.outFile().getParent());
 
             YamlDocument doc = loadYaml(
-                    spec.outFile().toFile(),
-                    spec.resourcePath(),
-                    spec.versionKey(),
-                    spec.requiredResource()
+                spec.outFile().toFile(),
+                spec.resourcePath(),
+                spec.versionKey(),
+                spec.requiredResource(),
+                spec.useDefaults()
             );
 
             docs.put(name, doc);
@@ -170,9 +171,9 @@ public class BoostedYamlPluginConfig implements BytePluginConfig {
             Files.createDirectories(langDir);
 
             YamlSpec langSpec = YamlSpec.of(
-                    langDir.resolve(locale + ".yml"),
-                    "lang/" + locale + ".yml",
-                    "language-version"
+                langDir.resolve(locale + ".yml"),
+                "lang/" + locale + ".yml",
+                "language-version"
             );
             // overwrite "lang" spec to point at the active locale file
             specs.put("lang", langSpec);
@@ -191,20 +192,25 @@ public class BoostedYamlPluginConfig implements BytePluginConfig {
     }
 
     private YamlDocument loadYaml(
-            File outFile,
-            String resourcePath,
-            String versionKey,
-            boolean requiredResource
+        File outFile,
+        String resourcePath,
+        String versionKey,
+        boolean requiredResource,
+        boolean useDefaults
     ) throws IOException {
 
         InputStream resource = resourcePath.isEmpty()
-                ? null
-                : plugin.getResource(resourcePath);
+            ? null
+            : plugin.getResource(resourcePath);
+
+        GeneralSettings.Builder generalSettings = GeneralSettings.builder();
 
         if (resource == null) {
             if (requiredResource && !resourcePath.isEmpty()) {
                 throw new IllegalStateException("Missing resource in jar: " + resourcePath);
             }
+
+            useDefaults = false; // Can't use defaults if none exist
 
             if (!outFile.exists()) {
                 Files.createDirectories(outFile.toPath().getParent());
@@ -217,23 +223,22 @@ public class BoostedYamlPluginConfig implements BytePluginConfig {
         }
 
         UpdaterSettings updaterSettings =
-                (versionKey == null)
-                        ? UpdaterSettings.DEFAULT
-                        : UpdaterSettings.builder()
-                        .setVersioning(new BasicVersioning(versionKey))
-                        .setOptionSorting(UpdaterSettings.OptionSorting.SORT_BY_DEFAULTS)
-                        .build();
+            (versionKey == null)
+                ? UpdaterSettings.DEFAULT
+                : UpdaterSettings.builder()
+                  .setVersioning(new BasicVersioning(versionKey))
+                  .setOptionSorting(UpdaterSettings.OptionSorting.SORT_BY_DEFAULTS)
+                  .build();
 
         YamlDocument doc = YamlDocument.create(
-                outFile,
-                resource,
-                GeneralSettings.DEFAULT,
-                LoaderSettings.builder().setAutoUpdate(true).build(),
-                DumperSettings.DEFAULT,
-                updaterSettings
+            outFile,
+            resource,
+            generalSettings.setUseDefaults(useDefaults).build(),
+            LoaderSettings.builder().setAutoUpdate(versionKey != null).build(), // Enables auto update if versionKey is present.
+            DumperSettings.DEFAULT,
+            updaterSettings
         );
 
-        doc.update();
         doc.save();
         return doc;
     }
@@ -258,25 +263,30 @@ public class BoostedYamlPluginConfig implements BytePluginConfig {
      * Small value object describing how to load a YAML.
      */
     public record YamlSpec(
-            Path outFile,
-            String resourcePath,
-            @Nullable String versionKey,
-            boolean requiredResource
+        Path outFile,
+        String resourcePath,
+        @Nullable String versionKey,
+        boolean requiredResource,
+        boolean useDefaults
     ) {
+        public static YamlSpec of(Path outFile, String resourcePath, String versionKey, boolean useDefaults) {
+            return new YamlSpec(outFile, resourcePath, versionKey, true, useDefaults);
+        }
+
         public static YamlSpec of(Path outFile, String resourcePath, String versionKey) {
-            return new YamlSpec(outFile, resourcePath, versionKey, true);
+            return new YamlSpec(outFile, resourcePath, versionKey, true, true);
         }
 
         public static YamlSpec of(Path outFile, String resourcePath) {
-            return new YamlSpec(outFile, resourcePath, null, true);
+            return new YamlSpec(outFile, resourcePath, null, true, true);
         }
 
         public static YamlSpec externalOnly(Path outFile) {
-            return new YamlSpec(outFile, "", null, false);
+            return new YamlSpec(outFile, "", null, false, false);
         }
 
         public static YamlSpec externalOnly(Path outFile, String versionKey) {
-            return new YamlSpec(outFile, "", versionKey, false);
+            return new YamlSpec(outFile, "", versionKey, false, false);
         }
     }
 
