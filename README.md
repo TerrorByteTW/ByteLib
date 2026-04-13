@@ -1,4 +1,7 @@
 # ByteLib
+<a href="https://hangar.papermc.io/TerrorByte/ByteLib">
+    <img alt="Hangar" src="https://img.shields.io/badge/Download%20At-Hangar-%23f29f22?style=for-the-badge">
+</a>
 
 ByteLib is a shared library for building modern, maintainable Paper plugins. This library is explicitly designed with
 the experimental Paper Plugin API in mind and comes with the following features:
