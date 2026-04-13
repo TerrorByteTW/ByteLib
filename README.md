@@ -17,7 +17,7 @@ the experimental Paper Plugin API in mind and comes with the following features:
 
 To reiterate, ByteLib is **not a plugin**, but rather a foundation that removes boilerplate and enforces safe
 architecture across all plugins that use it. ByteLib currently powers
-[DimensionPause](https://github.com/TerrorByteTW/DimensionPause), and plans to convert
-[Honeypot](https://github.com/TerrorByteTW/Honeypot) to ByteLib are in the works
+[DimensionPause](https://github.com/TerrorByteTW/DimensionPause) as of DimensionPause 2, and
+[Honeypot](https://github.com/TerrorByteTW/Honeypot) as of Honeypot 4.
 
 Check out the [Wiki](https://terrorbytetw.github.io/ByteLib/welcome-to-bytelib.html) to get started
