@@ -57,6 +57,8 @@ public void register(String name, YamlSpec spec);
 public static YamlSpec of(Path outFile, String resourcePath);
 
 public static YamlSpec of(Path outFile, String resourcePath, String versionKey);
+
+public static YamlSpec of(Path outFile, String resourcePath, String versionKey, boolean useDefaults);
             </code-block>
 
             <p>
@@ -75,7 +77,8 @@ public static YamlSpec of(Path outFile, String resourcePath, String versionKey);
                         relative to the plugin data folder.
                     </p>
                     <tip>The easiest way to get the path of the data folder is to inject <code>ByteLibPlugin</code> and
-                        use the <code>getDataFolder()</code> method. This is a Paper method that will return the data folder
+                        use the <code>getDataFolder()</code> method. This is a Paper method that will return the data
+                        folder
                         for your plugin, specifically (see the below example).
                     </tip>
                 </def>
@@ -90,10 +93,29 @@ public static YamlSpec of(Path outFile, String resourcePath, String versionKey);
                 <def title="versionKey" id="required-configurations-versionkey">
                     <p>
                         An optional key that identifies the configuration version value used by
-                        BoostedYAML to determine whether the file should be updated.
+                        BoostedYAML to determine whether the file should be updated. Auto-update is enabled if a version
+                        key is provided, which will automatically update the file to the latest version without
+                        requiring a manual call to <code>update()</code> in your plugin's lifecycle.
                     </p>
                     <p>
                         In the default <code>config.yml</code>, this is <code>file-version</code>.
+                    </p>
+                </def>
+
+                <def title="useDefaults" id="required-configurations-usedefaults">
+                    <p>
+                        An optional key that allows you to determine if your configuration's default values will be used
+                        by bulk-getter methods and/or the updater. If a value does not exist on disk, its default will
+                        be provided from the defaults
+                        <emphasis>only</emphasis>
+                        when this is true.
+                    </p>
+                    <p>
+                        Defaults are required if you are using versioning. This setting is mainly useful if you want to
+                        allow for your plugin to create required configuration files on the server and only populate
+                        them if they have defaults provided. If a resource is not required and no defaults are provided,
+                        <code>useDefaults</code> is automatically set to <code>false</code> and ByteLib will write
+                        placeholder YAML in the file instead.
                     </p>
                 </def>
             </deflist>

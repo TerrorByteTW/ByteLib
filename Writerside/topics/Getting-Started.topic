@@ -20,111 +20,286 @@
         documentation for the setup process.
     </p>
 
-    <tip>
-        <p>
-            If you're new to ByteLib, start with the bootstrapping documentation and then
-            explore the available APIs.
+    <chapter title="Adding ByteLib to your Project" id="adding-bytelib-to-your-project">
+        <p>ByteLib can be added to your project through either JitPack, GitHub Packages, or via the release JAR
+            file. Instructions are provided below for all three methods using Gradle or Maven.</p>
+        <note>
+            <p>Maven does not have a functional equivalent of Gradle's <code>implementation</code> dependency scope, so
+                it may function differently. Gradle is the recommended build tool by PaperMC and is considered a modern
+                replacement for Maven. As well, ByteLib has not been tested with Maven.</p>
+            <p>For these reasons, Gradle is the
+                recommended build tool. Maven instructions have not been validated, and are provided merely as a
+                courtesy.</p>
+        </note>
+        <tabs>
+            <tab title="JitPack" id="building-with-jitpack">
+                <p>JitPack is a free service that offers <b>just-in-time (JIT)</b> compiling &amp; packaging of Java
+                    projects. It's an easy way to publish your projects without setting up complex CI/CD pipelines.</p>
+                <tabs>
+                    <tab title="Gradle (Recommended)" id="gradle-jitpack">
+                        <p>To use JitPack, first add the JitPack repository to your Gradle <code>repositories</code>
+                            list
+                        </p>
+                        <code-block lang="kotlin">
+                        repositories {
+                            maven("https://jitpack.io")
+                        }
+                    </code-block>
+                        <p>After adding the JitPack repository, add ByteLib as an <code>implementation</code>
+                            dependency,
+                            replacing <code>ByteLib-1.1.3</code> with whatever version of ByteLib you're wanting to
+                            add. At
+                            the time of writing, 1.1.3 is the latest version</p>
+                        <include from="dependency_snippets.topic" element-id="gradle-dependency"/>
+                    </tab>
+                    <tab title="Maven" id="maven-jitpack">
+                        <p>To use JitPack, first add the JitPack repository to your Maven <code>repositories</code>
+                            list
+                        </p>
+                        <code-block lang="XML"><![CDATA[
+                        <repositories>
+                            <repository>
+                                <id>jitpack.io</id>
+                                <url>https://jitpack.io</url>
+                            </repository>
+                        </repositories>
+                    ]]></code-block>
+                        <p>After adding the JitPack repository, add ByteLib as a dependency, replacing
+                            <code>ByteLib-1.1.3</code> with whatever version of ByteLib you're wanting to add. At
+                            the time of writing, 1.1.3 is the latest version.</p>
+                        <include from="dependency_snippets.topic" element-id="maven-dependency"/>
+                    </tab>
+                </tabs>
+
+            </tab>
+            <tab title="GitHub Packages" id="building-with-github-packages">
+                <p>GitHub Packages is GitHub's own package repository. ByteLib publishes each release build to GitHub
+                    Packages automatically. GitHub Packages is a little more complicated to set up, and only release
+                    builds are available through it, so if you need snapshot builds or do not want to deal with
+                    authentication, use another method.</p>
+                <tabs>
+                    <tab title="Gradle (Recommended)" id="gradle-github-packages">
+                        <p>To use GitHub Packages with Gradle, first add the GitHub Packages repository to your
+                            project's <code>repositories</code> block.</p>
+                        <code-block lang="kotlin">
+                            repositories {
+                                maven {
+                                    name = "GitHubPackages"
+                                    url = uri("https://maven.pkg.github.com/TerrorByteTW/ByteLib")
+
+                                    credentials {
+                                        username =
+                                            project.findProperty("gpr.user") as String? ?: System.getenv("USERNAME")
+                                        password = project.findProperty("gpr.key") as String? ?: System.getenv("TOKEN")
+                                    }
+                                }
+                            }
+                        </code-block>
+                        <p>After adding the repository, add ByteLib as a dependency, replacing
+                            <code>ByteLib-1.1.3</code> with whatever version of ByteLib you want to use. At the time of
+                            writing, 1.1.3 is the latest version.</p>
+                        <include from="dependency_snippets.topic" element-id="gradle-dependency"/>
+                        <p>If you attempt to download the library now, you will receive an authentication error. To
+                            authenticate
+                            with GitHub Packages, add your GitHub username and PAT to your
+                            <code>gradle.properties</code> file,
+                            typically located at <code>USER_HOME\.gradle\gradle.properties</code>.</p>
+                        <code-block lang="properties">
+                            gpr.user=YOUR_USERNAME
+gpr.key=YOUR_AUTH_TOKEN
+                        </code-block>
+                        <p>For more information on creating a Personal Access Token (PAT), see this article: <a
+                                href="https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens">Creating
+                            a personal access token</a>. The token must have the <code>read:packages</code> scope, at
+                            minimum.</p>
+                    </tab>
+                    <tab title="Maven" id="maven-github-packages">
+                        <p>To use GitHub Packages, first add the GitHub Packages repository to your Maven <code>repositories</code>
+                            list.</p>
+                        <code-block lang="XML"><![CDATA[
+                            <repositories>
+                                <repository>
+                                    <id>github</id>
+                                    <name>GitHub TerrorByteTW Apache Maven Packages</name>
+                                    <url>https://maven.pkg.github.com/TerrorByteTW/ByteLib</url>
+                                    <releases>
+                                        <enabled>true</enabled>
+                                    </releases>
+                                    <snapshots>
+                                        <enabled>true</enabled>
+                                    </snapshots>
+                                </repository>
+                            </repositories>
+                        ]]></code-block>
+                        <p>After adding the GitHub Packages repository, add ByteLib as dependency, replacing
+                            <code>ByteLib-1.1.3</code> with whatever version of ByteLib you're wanting to
+                            add. At the time of writing, 1.1.3 is the latest version.</p>
+                        <include from="dependency_snippets.topic" element-id="maven-dependency"/>
+                        <p>If you attempt to download the library now, you will receive an authentication error. To
+                            authenticate with GitHub Packages,
+                            add your PAT to your <code>settings.xml</code>, typically located at <code>USER_HOME\.m2\settings.xml</code>.
+                        </p>
+                        <code-block lang="XML"><![CDATA[
+                            <servers>
+                                <server>
+                                    <id>github</id>
+                                    <username>YOUR_USERNAME</username>
+                                    <password>YOUR_AUTH_TOKEN</password>
+                                </server>
+                            </servers>
+                        ]]></code-block>
+                        <p>For more information on creating a Personal Access Token (PAT), see this article: <a
+                                href="https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens">Creating
+                            a personal access token</a>. The token must have the <code>read:packages</code> scope, at
+                            minimum.</p>
+                    </tab>
+                </tabs>
+            </tab>
+            <tab title="JAR File" id="building-with-jar-file">
+                <p>If you do not want to use JitPack or GitHub Packages, you may use a compiled JAR file obtained by
+                    either building ByteLib yourself from source, or by downloading it from the GitHub Releases
+                    page. Note that doing so will also require you to add the JavaDocs and Sources to your IDE
+                    separately
+                    to get proper debugging and inline documentation. Instructions for doing so vary between IDEs and
+                    will not be provided.</p>
+                <warning>
+                    <p>This method of adding ByteLib to your project is the least CI/CD-friendly way of
+                        doing so. It will be challenging for others to build your plugin. Using a direct JAR file
+                        is not recommended.</p>
+                </warning>
+                <tabs>
+                    <tab title="Gradle (Recommended)" id="gradle-jar-file">
+                        <p>To use a compiled ByteLib JAR file, add the file as a dependency. No repository is
+                            necessary.</p>
+                        <code-block lang="kotlin">
+                            dependencies {
+                                implementation(files("path/to/ByteLib-1.1.3.jar"))
+                            }
+                        </code-block>
+                    </tab>
+                    <tab title="Maven" id="maven-jar-file">
+                        <p>Maven does not have a native <code>files()</code> method like Gradle does. To add ByteLib as
+                            a dependency, you must first install it using the <code>mvn</code> CLI tool.</p>
+                        <code-block lang="Bash">
+                            mvn install:install-file \
+                              -Dfile=path/to/ByteLib-1.1.3.jar \
+                              -DgroupId=com.github.TerrorByteTW \
+                              -DartifactId=ByteLib \
+                              -Dversion=ByteLib-1.1.3 \
+                              -Dpackaging=jar
+                        </code-block>
+                        <p>After the JAR is installed into your local Maven repository, you may add it like a normal
+                            dependency.</p>
+                        <include from="dependency_snippets.topic" element-id="maven-dependency"/>
+                    </tab>
+                </tabs>
+            </tab>
+        </tabs>
+    </chapter>
+
+    <chapter title="Using ByteLib" id="using-bytelib">
+        <p>Just adding ByteLib to your project does not grant you the ability to use its APIs. Every plugin using
+            ByteLib will require some additional setup before ByteLib is actually "utilized". Namely,
+            your plugin must be
+            <tooltip term="bootstrap">bootstrapped</tooltip>
+            and the plugin loader must be configured.
         </p>
-    </tip>
 
-    <list type="bullet">
-        <li>
+        <list type="decimal">
+            <li>
+                <p>
+                    Review the <a href="Bootstrapping.topic">Bootstrapping</a> topic to learn how to
+                    bootstrap your plugin to use ByteLib.
+                </p>
+            </li>
+
+            <li>
+                <p>
+                    Review the <a href="Plugin-Loader.topic">Plugin Loader</a> documentation to learn how
+                    the Paper <code>PluginLoader</code> works in ByteLib.
+                </p>
+            </li>
+
+            <li>
+                <p>
+                    Create the required configuration files used by the <a href="Configuration-Translation.topic">Config
+                    API</a>, which are required for ByteLib-powered plugins to load.
+                </p>
+            </li>
+        </list>
+
+        <chapter title="ByteLib APIs" id="bytelib-apis">
             <p>
-                Review the <a href="Bootstrapping.topic">Bootstrapping</a> topic to learn how to
-                <tooltip term="bootstrap">bootstrap</tooltip>
-                your plugin to use ByteLib.
-            </p>
-        </li>
-
-        <li>
-            <p>
-                Review the <a href="Plugin-Loader.topic">Plugin Loader</a> documentation to learn how
-                the Paper <code>PluginLoader</code> works in ByteLib.
-            </p>
-        </li>
-    </list>
-
-    <chapter title="ByteLib APIs" id="bytelib-apis">
-
-        <p>
-            ByteLib provides several APIs that simplify plugin development. All APIs are designed
-            with Dependency Injection at their core, making them easy to integrate anywhere in
-            your plugin.
-        </p>
-
-        <p>
-            Explore the following topics to learn more about each API.
-        </p>
-
-        <chapter title="Config API" id="config-api">
-
-            <p>
-                The <a href="Configuration-Translation.topic">Config API</a> is an opinionated,
-                lightweight wrapper around the BoostedYAML library that simplifies interacting
-                with configuration files.
+                ByteLib provides several APIs that simplify plugin development. All APIs are designed
+                with Dependency Injection at their core, making them easy to integrate anywhere in
+                your plugin.
             </p>
 
             <p>
-                The API also includes utilities for handling translations and provides native
-                support for MiniMessage.
+                Explore the following topics to learn more about each API.
             </p>
 
+            <chapter title="Config API" id="config-api">
+                <p>
+                    The <a href="Configuration-Translation.topic">Config API</a> is a mandatory, opinionated,
+                    lightweight wrapper around the BoostedYAML library that simplifies interacting
+                    with configuration files.
+                </p>
+
+                <p>
+                    The API also includes utilities for handling translations and provides native
+                    support for MiniMessage.
+                </p>
+            </chapter>
+
+            <chapter title="Lifecycles API" id="lifecycles-api">
+                <p>
+                    The <a href="Lifecycle-API.topic">Lifecycles API</a> allows ByteLib plugins to define
+                    any number of <code>onLoad</code>, <code>onEnable</code>, and <code>onDisable</code>
+                    lifecycle hooks.
+                </p>
+
+                <p>
+                    This allows developers to keep their main plugin class thin while separating
+                    responsibilities into dedicated lifecycle components.
+                </p>
+
+                <p>
+                    Lifecycle handlers can also be executed in a defined order when required.
+                </p>
+            </chapter>
+
+            <chapter title="Commands API" id="commands-api">
+                <p>
+                    The <a href="Commands-API.topic">Commands API</a> allows developers to easily create
+                    and register Brigadier commands for their plugin.
+                </p>
+
+                <p>
+                    While conceptually similar to Brigadier, ByteLib's API provides a more opinionated
+                    interface for command creation and includes additional utilities for common
+                    command patterns.
+                </p>
+
+                <p>
+                    Like all ByteLib systems, the Commands API integrates directly with Google Guice
+                    Dependency Injection.
+                </p>
+            </chapter>
+
+            <chapter title="SQLite API" id="sqlite-api">
+                <p>
+                    One of ByteLib's most powerful features is the
+                    <a href="SQLite-API.topic">SQLite API</a>, which allows developers to easily create and
+                    interact with SQLite databases in a type-safe, object-oriented manner.
+                </p>
+
+                <p>
+                    The API preserves the flexibility of raw SQL while providing higher-level tools
+                    for common database interactions.
+                </p>
+            </chapter>
         </chapter>
-
-        <chapter title="Lifecycles API" id="lifecycles-api">
-
-            <p>
-                The <a href="Lifecycle-API.topic">Lifecycles API</a> allows ByteLib plugins to define
-                any number of <code>onLoad</code>, <code>onEnable</code>, and <code>onDisable</code>
-                lifecycle hooks.
-            </p>
-
-            <p>
-                This allows developers to keep their main plugin class thin while separating
-                responsibilities into dedicated lifecycle components.
-            </p>
-
-            <p>
-                Lifecycle handlers can also be executed in a defined order when required.
-            </p>
-
-        </chapter>
-
-        <chapter title="Commands API" id="commands-api">
-
-            <p>
-                The <a href="Commands-API.topic">Commands API</a> allows developers to easily create
-                and register Brigadier commands for their plugin.
-            </p>
-
-            <p>
-                While conceptually similar to Brigadier, ByteLib's API provides a more opinionated
-                interface for command creation and includes additional utilities for common
-                command patterns.
-            </p>
-
-            <p>
-                Like all ByteLib systems, the Commands API integrates directly with Google Guice
-                Dependency Injection.
-            </p>
-
-        </chapter>
-
-        <chapter title="SQLite API" id="sqlite-api">
-
-            <p>
-                One of ByteLib's most powerful features is the
-                <a href="SQLite-API.topic">SQLite API</a>, which allows developers to easily create and
-                interact with SQLite databases in a type-safe, object-oriented manner.
-            </p>
-
-            <p>
-                The API preserves the flexibility of raw SQL while providing higher-level tools
-                for common database interactions.
-            </p>
-
-        </chapter>
-
     </chapter>
 
 </topic>

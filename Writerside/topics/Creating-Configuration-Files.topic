@@ -12,7 +12,10 @@
         their configuration files,
         <emphasis>but</emphasis>
         two files are required for the API to
-        function.
+        function. Config API is automatically registered during plugin
+        <tooltip term="bootstrap">bootstrapping,</tooltip>
+        so if these files do not exist,
+        Config API will throw an exception, and your plugin will not load.
     </p>
 
     <list type="bullet">
@@ -124,8 +127,8 @@ language-version: 1
         <chapter title="Allowing custom translations" id="allowing-custom-translations">
 
             <p>
-                ByteLib allows server administrators to create their own translation files in
-                order to crowdsource translations or customize chat messages.
+                ByteLib allows server administrators to create their own translation files to crowdsource translations
+                or customize chat messages.
             </p>
 
             <warning>
