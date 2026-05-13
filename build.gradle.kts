@@ -10,7 +10,7 @@ plugins {
 }
 
 project.group = "org.reprogle"
-project.version = "1.1.3"
+project.version = "1.1.4"
 project.description =
     "A library for wrapping common tasks my plugins do, such as SQLite storage or command creation/registration"
 
@@ -39,11 +39,6 @@ repositories {
         name = "papermc"
         url = uri("https://repo.papermc.io/repository/maven-public/")
     }
-    maven {
-        name = "sonatype"
-        url = uri("https://oss.sonatype.org/content/groups/public/")
-    }
-    mavenCentral()
 }
 
 dependencies {

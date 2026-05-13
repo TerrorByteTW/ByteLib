@@ -29,6 +29,7 @@ import io.papermc.paper.plugin.loader.PluginLoader;
 import io.papermc.paper.plugin.loader.library.impl.MavenLibraryResolver;
 import org.eclipse.aether.artifact.DefaultArtifact;
 import org.eclipse.aether.graph.Dependency;
+import org.eclipse.aether.repository.RemoteRepository;
 
 @SuppressWarnings("UnstableApiUsage")
 public class BytePluginLoader implements PluginLoader {
@@ -38,6 +39,7 @@ public class BytePluginLoader implements PluginLoader {
 
         resolver.addDependency(new Dependency(new DefaultArtifact("dev.dejvokep:boosted-yaml:1.3.7"), null));
         resolver.addDependency(new Dependency(new DefaultArtifact("com.google.inject:guice:7.0.0"), null));
+        resolver.addRepository(new RemoteRepository.Builder("central", "default", MavenLibraryResolver.MAVEN_CENTRAL_DEFAULT_MIRROR).build());
 
         classpathBuilder.addLibrary(resolver);
     }
